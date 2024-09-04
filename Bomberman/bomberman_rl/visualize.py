@@ -34,7 +34,7 @@ def plot_event_statistics(data, stats_to_plot):
 
     for stat in stats_to_plot:
         if stat in data.columns:
-            plt.plot(data["Cumulative Iterations"], data[stat], label = stat)
+            plt.plot(data["Cumulative Iterations"], data[stat] / data["Rounds Played"], label = stat)
         else:
             print(f"Statistic {stat} not found in columns.")
 

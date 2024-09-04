@@ -5,8 +5,8 @@ import random
 import numpy as np
 
 
-ACTIONS = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT', 'BOMB']
-EPSILON = 0.15
+ACTIONS = ['UP', 'RIGHT', 'DOWN', 'LEFT']
+EPSILON = 0.10
 
 def setup(self):
     """
@@ -78,7 +78,14 @@ def state_to_features(game_state: dict) -> tuple:
         coins = game_state['coins']
         own_position = game_state['self'][3]
         agent_nearby_fields = nearby_fields(own_position)
-        nearest_coin_dist = min([abs(coin[0] - own_position[0]) + abs(coin[1] - own_position[1]) for coin in coins]) if coins else 0
+        nearest_coin = nearest_coin_calc(own_position, coins)
 
-        return(own_position[0],own_position[1],agent_nearby_fields[0],agent_nearby_fields[1],agent_nearby_fields[2],agent_nearby_fields[3],score,nearest_coin_dist)
+
+        return(own_position[0],own_position[1],agent_nearby_fields[0],agent_nearby_fields[1],agent_nearby_fields[2],agent_nearby_fields[3],score, nearest_coin[0], nearest_coin[1], nearest_coin[2])
     
+def nearest_coin_calc(position, coins):
+    x_0, y_0 = position
+    # Nearest coin coordinates and distance (Manhattan distance)
+    nearest = min(coins, key=lambda coin: abs(coin[0] - x_0) + abs(coin[1] - y_0))
+    distance = abs(nearest[0] - x_0) + abs(nearest[1] - y_0)
+    return [nearest[0], nearest[1], distance]
