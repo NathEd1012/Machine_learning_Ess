@@ -1,3 +1,7 @@
 # Ignore logs
 *.log
 /logs
+
+# Cache as well
+*.pyc
+/__pycache__

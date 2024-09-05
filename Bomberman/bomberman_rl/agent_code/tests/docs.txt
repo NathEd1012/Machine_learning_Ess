@@ -1,0 +1,9 @@
+Decided not to delete training_stats.csv, instead log the changes here:
+
+2024-09-05 10:31:58, Deleted q_table.pkl, started training on scenario coin-heaven
+2024-09-05 12:18:26, Deleted q_table.pkl, started training without foreign agents
+2024-09-05 13:15:35, Deleted q_table.pkl due to corrupt file
+2024-09-05 15:41:00, Deleted q_table.pkl, reduced number of features to 13
+2024-09-05 15:41:00, Broke training_stats.csv, save as copy and start fresh
+2024-09-05 15:57:41, Turns out act() was still only random
+, Deleted q_table.pkl, Updated Rewards: self.KILLED_SELF: -5, included danger_here as feature
