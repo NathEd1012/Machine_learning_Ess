@@ -157,7 +157,6 @@ def end_of_round(self, last_game_state, last_action, events):
         if event in self.event_count:
             self.event_count[event] += 1
 
-
     # Q-update
     last_state = state_to_features(last_game_state)
 
@@ -176,6 +175,11 @@ def end_of_round(self, last_game_state, last_action, events):
     # Check if this was the last round
     if self.round_counter >= self.total_rounds:
         end_of_training(self)
+
+    print(len(self.q_table))
+    print(last_game_state["self"][0])
+
+    #print(self.q_table)
 
 def end_of_training(self):
     """
