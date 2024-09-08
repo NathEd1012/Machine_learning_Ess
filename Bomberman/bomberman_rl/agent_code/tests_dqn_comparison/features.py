@@ -144,15 +144,12 @@ def state_to_features(game_state: dict) -> np.array:
     # Check how many crates destroy bomb
     crates_destroyed_features = crates_in_bomb_range(game_state, own_position)
     
-    # Check neighboring tiles
-    neighboring_tiles_features = get_neighboring_tiles(own_position, game_state)
 
     features = np.concatenate([
         own_position_features, # x, y of own agent
-        neighboring_tiles_features, # Info on neighboring tiles
-#        coin_features, # x, y, d(x, y) of nearest coins to player
-#        enemy_features, # x, y, d(x, y), bomb_availability of enemies to player
-#        crate_features, # x, y, d(x, y) of nearest crate to player
+        coin_features, # x, y, d(x, y) of nearest coins to player
+        enemy_features, # x, y, d(x, y), bomb_availability of enemies to player
+        crate_features, # x, y, d(x, y) of nearest crate to player
         [danger_up, danger_down, danger_left, danger_right], # Directions where danger
         escape_route_features, # Escape routes available? Y/N
         #bomb_availability_features, # Bomb available? Y/N
@@ -163,22 +160,6 @@ def state_to_features(game_state: dict) -> np.array:
 
 
     return features
-
-# Get neighboring tiles
-def get_neighboring_tiles(own_position, game_state):
-
-    field = game_state['field']
-    x, y = own_position
-    rows, cols = field.shape
-
-    tile_up = field[x][y - 1]
-    tile_down = field[x][y + 1]
-    tile_right = field[x + 1][y]
-    tile_left = field[x - 1][y]
-
-    neighboring_tiles = [tile_up, tile_right, tile_down, tile_left]
-
-    return neighboring_tiles
 
 # Check if I have bombs left
 def bombs_question_mark(game_state):

@@ -38,7 +38,7 @@ def setup(self):
     self.EPSILON = EPSILON
 
     # Input-output sizes
-    input_size = 11
+    input_size = 13
     output_size = len(ACTIONS)
 
     # Initialize DQN
