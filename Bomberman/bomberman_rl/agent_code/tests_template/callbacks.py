@@ -7,6 +7,8 @@ import numpy as np
 
 ACTIONS = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT', 'BOMB']
 
+from .features import state_to_features
+
 
 def setup(self):
     """
@@ -22,9 +24,14 @@ def setup(self):
 
     :param self: This object is passed to all callbacks and you can set arbitrary values.
     """
-
-
-    #print(f"callbacks.py -> setup()")
+    # Initialize Q-table (or load if available)
+    if os.path.exists('q_table.pkl'):
+        with open('q_table.pkl', 'rb') as file:
+            self.Q_table = pickle.load(file)
+        self.logger.info(f"Q-table loaded from file, current table size: {len(self.Q_table)}")
+    else:
+        self.Q_table = {}
+        self.logger.info(f"No Q-table found, initializing a new one")
 
     self.action_count = {action: 0 for action in ACTIONS}
 
@@ -47,57 +54,41 @@ def act(self, game_state: dict) -> str:
     :param game_state: The dictionary that describes everything on the board.
     :return: The action to take as a string.
     """
-    # todo Exploration vs exploitation
-    #print("callbacks.py -> act()")
+    # Ensure the Q-table is initialized
+    if not hasattr(self, 'Q_table'):
+        self.logger.warning("Q-table not found, initializing a new one.")
+        self.Q_table = {}
 
-    #print("Games state dict:")
-    #print("Step", game_state['step'])
-    #print("Others:", game_state['others'])
-
-    
-
-    random_prob = .1
-    if self.train and random.random() < random_prob:
-        self.logger.debug("Choosing action purely at random.")
-        # 80%: walk in any direction. 10% wait. 10% bomb.
-        return np.random.choice(ACTIONS, p=[.2, .2, .2, .2, .1, .1])
-
-    self.logger.debug("Querying model for action.")
-
-    action = np.random.choice(ACTIONS, p=self.model)
-    self.action_count[action] += 1
-
+    # Convert game state to features
     state_features = state_to_features(game_state)
-    #print(f"State: {state_features}, Action: {action}")
+
+    # If game state is None (e.g., agent is dead), return a default action
+    if state_features is None:
+        return 'WAIT'
+
+    # Epsilon-greedy action selection
+    if self.train and np.random.rand() < self.EPSILON:
+        self.logger.debug("Choosing action purely at random.")
+        # Random action with specific probabilities
+        action = np.random.choice(ACTIONS, p=[.2, .2, .2, .2, .1, .1])
+    else:
+        self.logger.debug("Choosing action based on Q-table.")
+
+        # Get the Q-values for the current state (use tuple for hashability)
+        state_tuple = tuple(state_features)
+
+        # Check if state is in Q-table, otherwise initialize Q-values
+        if state_tuple not in self.Q_table:
+            self.Q_table[state_tuple] = np.zeros(len(ACTIONS))
+
+        # Choose action with the highest Q-value (exploitation)
+        action = ACTIONS[np.argmax(self.Q_table[state_tuple])]
+
+    # Log the selected action
+    self.logger.debug(f"Action chosen: {action}")
+
+    # Update action counts
+    self.action_count[action] += 1
 
     return action
 
-
-def state_to_features(game_state: dict) -> np.array:
-    """
-    *This is not a required function, but an idea to structure your code.*
-
-    Converts the game state to the input of your model, i.e.
-    a feature vector.
-
-    You can find out about the state of the game environment via game_state,
-    which is a dictionary. Consult 'get_state_for_agent' in environment.py to see
-    what it contains.
-
-    :param game_state:  A dictionary describing the current game board.
-    :return: np.array
-    """
-    #print("callbacks.py -> state_to_features()")
-    # This is the dict before the game begins and after it ends
-    if game_state is None:
-        return None
-
-    
-
-    # For example, you could construct several channels of equal shape, ...
-    channels = []
-    channels.append(...)
-    # concatenate them as a feature tensor (they must have the same shape), ...
-    stacked_channels = np.stack(channels)
-    # and return them as a vector
-    return stacked_channels.reshape(-1)

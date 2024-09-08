@@ -132,6 +132,8 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
         if event in self.event_count:
             self.event_count[event] += 1
 
+    #print(self.event_count)
+
     self.logger.debug(f'Encountered event(s) {", ".join(map(repr, events))} in final step')
     self.transitions.append(Transition(state_to_features(last_game_state), last_action, None, reward))
 

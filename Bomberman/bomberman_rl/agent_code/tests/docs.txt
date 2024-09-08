@@ -6,4 +6,6 @@ Decided not to delete training_stats.csv, instead log the changes here:
 2024-09-05 15:41:00, Deleted q_table.pkl, reduced number of features to 13
 2024-09-05 15:41:00, Broke training_stats.csv, save as copy and start fresh
 2024-09-05 15:57:41, Turns out act() was still only random
-, Deleted q_table.pkl, Updated Rewards: self.KILLED_SELF: -5, included danger_here as feature
+2024-09-05 16:31:04, Deleted q_table.pkl, Updated Rewards: self.KILLED_SELF: -5, included danger_here as feature
+2024-09-08 11:52:05, Started training on scenario loot-crate
+, Changed Rewards: CRATE_DESTROYED: 0.5, COIN_FOUND: 0.25

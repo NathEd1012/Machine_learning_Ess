@@ -32,7 +32,7 @@ def setup(self):
     else:
         self.Q_table = {}
         self.logger.info(f"No Q-table found, initializing a new one")
-        
+
     self.action_count = {action: 0 for action in ACTIONS}
 
     if self.train or not os.path.isfile("my-saved-model.pt"):
@@ -54,6 +54,10 @@ def act(self, game_state: dict) -> str:
     :param game_state: The dictionary that describes everything on the board.
     :return: The action to take as a string.
     """
+    # Ensure the Q-table is initialized
+    if not hasattr(self, 'Q_table'):
+        self.logger.warning("Q-table not found, initializing a new one.")
+        self.Q_table = {}
 
     # Convert game state to features
     state_features = state_to_features(game_state)
