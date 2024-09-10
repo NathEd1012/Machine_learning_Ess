@@ -36,14 +36,6 @@ def state_to_features(game_state: dict) -> np.array:
     This turns the entire game_state into a manageable set of features
     for our agent to learn. From the possible combinations of the game_state
     we will distill a tuple of the ones we consider particularly relevant.
-
-    Primarily, we want the agent to have knowledge about
-    -> its own position
-    -> coin and crate position and distance
-    -> enemy position and distance
-    -> bomb countdown
-    -> immediate danger
-    -> playing field, i.e. walls, etc.
     """
     if game_state is None:
         return None
@@ -53,113 +45,34 @@ def state_to_features(game_state: dict) -> np.array:
     own_position = game_state['self'][3] 
     own_position_features = own_position / np.array([board_width, board_height])
 
-
-    # Coin features
-    coin_positions = np.array(game_state['coins'])
-    if len(coin_positions) > 0:
-        # Relative Position to coins
-        relative_position_to_coins = coin_positions - own_position
-        # Manhattan distance, sort by closest
-        distances_to_coins = np.abs(relative_position_to_coins).sum(axis = 1)
-        sorted_indices = np.argsort(distances_to_coins)[:MAX_COINS]
-        # Nearest MAX_COINS
-        nearest_relative_positions = relative_position_to_coins[sorted_indices]
-
-        # Pad with zeros if fewer than MAX_COINS
-        num_coins_found = len(nearest_relative_positions)
-        if num_coins_found < MAX_COINS:
-            nearest_relative_positions = np.pad(nearest_relative_positions, ((0, MAX_COINS - num_coins_found), (0, 0)), 'constant')
-
-        # Coin features flattened
-        coin_features = nearest_relative_positions.flatten() / board_width
-    else:
-        # No coins
-        coin_features = np.zeros(MAX_COINS * 2)
-
-
-    # Danger zone for bombs
-    bomb_info = game_state['bombs']
-    danger_map = danger_zone(game_state)
-    danger_up, danger_down, danger_left, danger_right, danger_here = directional_danger(own_position, danger_map, bomb_info)
-
-
-    # Enemy position and distance from agent, bomb_availability
-    enemies = np.array([enemy[3] for enemy in game_state['others']])
-    #bomb_availability_enemies = np.array([enemy[2] for enemy in game_state['others']])
-
-    if len(enemies) > 0:
-        # Relative position to enemies
-        relative_position_to_enemies = enemies - own_position
-        # Manhattan distance, sort by closest
-        distance_to_enemies = np.abs(relative_position_to_enemies).sum(axis = 1)
-        sorted_indices = np.argsort(relative_position_to_enemies)[:MAX_ENEMIES]
-        # Nearest enemies
-        nearest_relative_positions = relative_position_to_enemies[sorted_indices]
-
-        # Pad with zeros if fewer than MAX_ENEMIES
-        num_enemies_found = len(nearest_relative_positions)
-        if num_enemies_found < MAX_ENEMIES:
-            nearest_relative_positions = np.pad(nearest_relative_positions, ((0, MAX_ENEMIES - num_enemies_found), (0, 0)), 'constant')
-
-        # Enemy features flattened
-        enemy_features = nearest_relative_positions.flatten() / board_width
-    else: 
-        enemy_features = np.zeros(MAX_ENEMIES * 2)
-
-    
-    # Crate features
-    crate_positions = np.argwhere(game_state['field'] == 1)
-    if len(crate_positions) > 0:
-        # Relative Position to crates
-        relative_position_to_crates = crate_positions - own_position
-        # Manhattan distance, sort by closest
-        distances_to_crates = np.abs(relative_position_to_crates).sum(axis = 1)
-        sorted_indices = np.argsort(distances_to_crates)[:MAX_CRATES]
-        # Nearest MAX_CRATES
-        nearest_relative_positions = relative_position_to_crates[sorted_indices]
-
-        # Pad with zeros if fewer than MAX_CRATES
-        num_crates_found = len(nearest_relative_positions)
-        if num_crates_found < MAX_CRATES:
-            nearest_relative_positions = np.pad(nearest_relative_positions, ((0, MAX_CRATES - num_crates_found), (0, 0)), 'constant')
-
-        # Crate features flattened
-        crate_features = nearest_relative_positions.flatten() / board_width
-    else:
-        # No crates
-        crate_features = np.zeros(MAX_CRATES * 2)
-
-
-    
-
-    # Features of the field around the agent in a FIELD_OF_VIEW^2 area
-    local_features = field_field_of_view(game_state, own_position, radius = FIELD_OF_VIEW)
-
-    # Check if there are immediate escape_routes
-    escape_route_features = escape_routes(game_state, own_position)
-
-    # Check if have bomb
-    bomb_availability_features = bombs_question_mark(game_state)
-
-    # Check how many crates destroy bomb
-    crates_destroyed_features = crates_in_bomb_range(game_state, own_position)
-    
-
+    # Neighboring tiles
+    neighboring_tiles_features = get_neighboring_tiles(own_position, game_state)
+        
     features = np.concatenate([
-        own_position_features, # x, y of own agent
-        coin_features, # x, y, d(x, y) of nearest coins to player
-        enemy_features, # x, y, d(x, y), bomb_availability of enemies to player
-        crate_features, # x, y, d(x, y) of nearest crate to player
-        [danger_up, danger_down, danger_left, danger_right], # Directions where danger
-        escape_route_features, # Escape routes available? Y/N
-        #bomb_availability_features, # Bomb available? Y/N
-        #crates_destroyed_features # How many crates go boom w one bomb
+            neighboring_tiles_features # 4: up, right, down, left
         ])
+    #print(features)
 
     #print(len(features))
 
 
     return features
+
+# Get neighboring tiles
+def get_neighboring_tiles(own_position, game_state):
+
+    field = game_state['field']
+    x, y = own_position
+    rows, cols = field.shape
+
+    tile_up = field[x][y - 1]
+    tile_down = field[x][y + 1]
+    tile_right = field[x + 1][y]
+    tile_left = field[x - 1][y]
+
+    neighboring_tiles = [tile_up, tile_right, tile_down, tile_left]
+
+    return neighboring_tiles
 
 # Check if I have bombs left
 def bombs_question_mark(game_state):

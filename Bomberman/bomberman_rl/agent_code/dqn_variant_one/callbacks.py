@@ -9,7 +9,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 
-ACTIONS = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT', 'BOMB']
+ACTIONS = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT']#, 'BOMB']
 
 from .features import state_to_features
 
@@ -38,7 +38,7 @@ def setup(self):
     self.EPSILON = EPSILON
 
     # Input-output sizes
-    input_size = 13
+    input_size = 4 # 4: neighboring_tiles_features
     output_size = len(ACTIONS)
 
     # Initialize DQN

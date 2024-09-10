@@ -1,0 +1,73 @@
+Documentation for Variant Two of the DQN:
+
+In an elimination type matchup, we will select different features and train them on Variant One and Variant Two.
+The features which lead to the best learned behavior will move on to the next stage of training.
+
+On Phase 1: We want to teach the agent to walk and to avoid walking directly into walls. Therefore, we need to provide 
+it with knowledge about the immediate neighboring walls and punish it for performing invalid actions. We will monitor the 
+amount of Invalid Actions the agent performs with consecutive training iterations. For this first stage, we remove 'BOMB'
+from the possible actions, to avoid having that as an Invalid Action.
+
+    ################## Variant 2.1.1
+
+    The features vector is a four dimensional vector which only indicates whether a move up, right, down, left is valid, i.e.
+    if game_state['field'] == 0 for that position. 
+
+    In the first variant, we will punish Invalid Action with -1 and reward any kind of movement with 0.02, so that the agent 
+    learns to explore. We will need to take precaution with rewarding movement, as we don't want to train the agent to explore 
+    recklessly in the future. We will also punish waiting with -0.1 to keep the agent from staying in the same tile throughout
+    the game.
+
+    To train the agent, we created a custom scenario 
+
+        "mostly-empty": {
+        "CRATE_DENSITY": 0.2,
+        "COIN_COUNT": 0
+        }
+
+    to account for crates, but also permit somewhat free exploration. With the given feature, crates are handled the same way as 
+    walls.
+
+    The rewards are set as:
+
+        e.INVALID_ACTION: -1,
+        e.MOVED_LEFT: 0.02,
+        e.MOVED_RIGHT: 0.02,
+        e.MOVED_UP: 0.02,
+        e.MOVED_DOWN: 0.02,
+        e.WAITED: -0.05,
+
+    ---------> Results: 
+        Agent seems to convert to a strategy where it doesn't try going into walls, however, it gets stuck in a loop of
+        right-left or up-down, since it doesn't have any incentive to explore.
+
+        #### First training session: 2024-09-10 21:41:40 (stats/ts-2-1-1-1.csv)
+        dqn_variant_two appears to converge much faster to the predicted 14.4 invalid moves per round dictated by our 
+        greedy epsilon strategy. After less than 100 training iterations, it has learned not to crash into walls.
+
+        We delete the model (models/2-1-1-1) and begin again to confirm that this is not an anomaly.
+
+        #### Second training session: 2024-09-10 22:39:56 (stats/ts-2-1-1-2.csv)
+        Initially, it appears as though the agent is performing random actions throughout and crashing all the time into
+        walls, completely contradicting the smooth behavior it showed in the first session. After 1000 training rounds, 
+        it converges for a while to a suboptimal policy at around 30 invalid actions per round. A short while later it 
+        converges to the expected ~14.
+
+        Contrary to the first session, at no point in the 2400 training rounds does dqn_v2 learn not to wait.
+
+        We delete the model (models/2-1-1-2.pt) and begin again for peace of mind.
+
+        #### Third training session: 2024-09-10 23:04:23 (stats/ts-2-1-1-3.csv)
+        dqn_v2 appears to learn quickly, that invalid actions are bad (after 100 rounds), but isn't that convinced. The 
+        value fluctuates drastically and after 300 rounds, it skyrockets again for another 100 rounds before it settles on the optimal policy.
+        However, it learns to WAIT for every move.
+
+        We delete the model (models/2-1-1-3.pt) and begin again for peace of mind.
+
+        #### Fourth training session: 2024-09-10 23:25:58 (stats/ts-2-1-1-4.csv)
+        The agent learns very quickly to avoid invalid actions and also relatively quickly not to wait for the optimal policy.
+
+
+On Phase 2: We want to teach the agent how to avoid walking into bombs it placed itself. So, the agent Should
+have access to features that inform it about the explosion map and the impending danger after bombs. Likewise,
+we will adjust the rewards to reinforce this behavior.

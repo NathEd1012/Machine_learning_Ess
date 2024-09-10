@@ -1,0 +1,79 @@
+Documentation for Variant One of the DQN:
+
+In an elimination type matchup, we will select different features and train them on Variant One and Variant Two.
+The features which lead to the best learned behavior will move on to the next stage of training.
+
+################## Variant 1.1
+
+On Phase 1: We want to teach the agent to walk and to avoid walking directly into walls. Therefore, we need to provide 
+it with knowledge about the immediate neighboring walls and punish it for performing invalid actions. We will monitor the 
+amount of Invalid Actions the agent performs with consecutive training iterations. For this first stage, we remove 'BOMB'
+from the possible actions, to avoid having that as an Invalid Action.
+
+    ################## Variant 1.1.1
+
+    The features vector is a four dimensional vector which includes the state of the tiles up, right, down and left 
+    from the current agent position. As game_state['field'] indicates, free fields are marked by 0, walls by -1, crates by +1.
+
+    In the first variant, we will punish Invalid Action with -1 and reward any kind of movement with 0.02, so that the agent 
+    learns to explore. We will need to take precaution with rewarding movement, as we don't want to train the agent to explore 
+    recklessly in the future. We will also punish waiting with -0.1 to keep the agent from staying in the same tile throughout
+    the game.
+
+    To train the agent, we created a custom scenario 
+
+        "mostly-empty": {
+        "CRATE_DENSITY": 0.2,
+        "COIN_COUNT": 0
+        }
+
+    to account for crates, but also permit somewhat free exploration.
+
+    The rewards are set as:
+
+        e.INVALID_ACTION: -1,
+        e.MOVED_LEFT: 0.02,
+        e.MOVED_RIGHT: 0.02,
+        e.MOVED_UP: 0.02,
+        e.MOVED_DOWN: 0.02,
+        e.WAITED: -0.05,
+
+    ---------> Results: 
+        Agent seems to convert to a strategy where it doesn't try going into walls, however, it gets stuck in a loop of
+        right-left or up-down, since it doesn't have any incentive to explore.
+
+
+        #### First training session: 2024-09-10 21:41:41 (stats/ts-1-1-1-1.csv)
+        dqn_variant_one appears to converge much slower to the predicted 14.4 invalid moves per round dictated by our 
+        greedy epsilon strategy. After more than 700 training iterations, it has learned not to crash into walls. It also
+        appears to initially learn to WAIT for a much larger time, before also converging on the optimal policy of not
+        waiting
+
+        We delete the model (models/1-1-1-1.pt) and begin again to confirm that this is not an anomaly.
+
+        #### Second training session: 2024-09-10 21:41:41 (stats/ts-1-1-1-2.csv)
+        dqn_v1 appears to initially converge quicker, while dqn_v2 is wildly inconsistent up to 1000 iterations ahead. 
+        The rate at which it performs invalid actions is nevertheless significantly higher than in the first training session.
+        After almost 1000 training rounds, it converges to a suboptimal minimum at approximately 30 Invalid actions per round,
+        which is double that of the expected random chance. After almost 2000 rounds, it seems to reach the optimal policy. We 
+        will train it for 400 rounds more to verify. Indeed it converges.
+
+        After 2000 training rounds, dqn_v1 learns that it is not optimal to wait.
+
+        We delete the model (models/1-1-1-2.pt) and begin again for peace of mind.
+
+        #### Third training session: 2024-09-10 23:04:20 (stats/ts-1-1-1-3.csv)
+        dqn_v1 learns quickly to avoid invalid actions and settles on an optimal policy after 100 rounds of training. However, 
+        it has learned this time to WAIT for every move.
+
+        We delete the model (models/1-1-1-3.pt) and begin again for peace of mind.
+
+        #### Fourth training session: 2024-09-10 23:04 (models/1-1-1-4.pt)
+        At no point does the dqn_v1 learn not to perform invalid movements. It also does not learn not to wait.
+
+
+################## Variant 1.2
+
+On Phase 2: We want to teach the agent how to avoid walking into bombs it placed itself. So, the agent Should
+have access to features that inform it about the explosion map and the impending danger after bombs. Likewise,
+we will adjust the rewards to reinforce this behavior.

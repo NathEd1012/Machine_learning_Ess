@@ -41,7 +41,7 @@ DECAY_RATE = 0.99
 TRANSITION_HISTORY_SIZE = 10
 
 # Data log
-LOG_FREQUENCY = 100
+LOG_FREQUENCY = 10
 
 # Transition
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
@@ -73,7 +73,8 @@ def setup_training(self):
     self.stat_logger = TrainingLogger(
         'training_stats.csv',
         [event for event in dir(e) if not event.startswith('__')],
-        ACTIONS
+        ACTIONS,
+        log_frequency = LOG_FREQUENCY
         )
 
     # Log counter
@@ -193,20 +194,24 @@ def reward_from_events(self, events: List[str]) -> int:
     Modify the rewards your agent gets to encourage certain behavior.
     """
     game_rewards = {
-        e.COIN_COLLECTED: 1,
-        e.KILLED_OPPONENT: 5,
-        e.MOVED_LEFT: -0.01,
-        e.MOVED_RIGHT: -0.01,
-        e.MOVED_UP: -0.01,
-        e.MOVED_DOWN: -0.01,
-        e.INVALID_ACTION: -0.1,
-        e.WAITED: -0.01,
-        e.KILLED_SELF: -5,
-        e.GOT_KILLED: -5,
-        e.CRATE_DESTROYED: 0.5,
-        e.COIN_FOUND: 0.25,
-        e.BOMB_DROPPED: -0.1,
-        e.SURVIVED_ROUND: 5
+        #e.COIN_COLLECTED: 1,
+        #e.KILLED_OPPONENT: 5,
+        #e.MOVED_LEFT: -0.01,
+        #e.MOVED_RIGHT: -0.01,
+        #e.MOVED_UP: -0.01,
+        #e.MOVED_DOWN: -0.01,
+        e.INVALID_ACTION: -1,
+        e.MOVED_LEFT: 0.02,
+        e.MOVED_RIGHT: 0.02,
+        e.MOVED_UP: 0.02,
+        e.MOVED_DOWN: 0.02,
+        e.WAITED: -0.05,
+        #e.KILLED_SELF: -5,
+        #e.GOT_KILLED: -5,
+        #e.CRATE_DESTROYED: 0.5,
+        #e.COIN_FOUND: 0.25,
+        #e.BOMB_DROPPED: -0.1,
+        #e.SURVIVED_ROUND: 5
     }
     reward_sum = 0
     for event in events:

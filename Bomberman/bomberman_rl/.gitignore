@@ -5,3 +5,9 @@
 # Cache as well
 *.pyc
 /__pycache__
+
+# Old models
+/models
+
+# Old stats
+/stats

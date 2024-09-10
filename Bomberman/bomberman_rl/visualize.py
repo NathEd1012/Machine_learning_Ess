@@ -5,13 +5,16 @@ import sys
 import argparse
 
 
-def load_data(file_path):
+### Load data
+def load_data(agent_name):
     """
     Load csv file into a pd DataFrame
 
     :param file_path: Path to training_stats.csv
     :return: DataFrame containing data
     """
+    file_path = f"agent_code/{agent_name}/training_stats.csv"
+
     if not os.path.isfile(file_path):
         print(f"File not found in: {file_path}")
         sys.exit(1)
@@ -19,6 +22,8 @@ def load_data(file_path):
     data = pd.read_csv(file_path)
     return data
 
+
+### Event statistics
 def plot_event_statistics(data, stats_to_plot):
     """
     Plot selected statistics over cumulative number of training iterations
@@ -40,12 +45,48 @@ def plot_event_statistics(data, stats_to_plot):
 
     plt.title("Statistics")
     plt.xlabel("Cumulative training iterations")
-    plt.ylabel("Value")
+    plt.ylabel("Normalized Value per Round")
     plt.legend()
     plt.tight_layout()
 
     plt.show()
 
+### Comparison event staistics
+def compare_event_statistics(data1, data2, stats_to_plot, label1, label2):
+    """
+    Plot and compare the statistics over cumulative number of training iterations 
+    for two different agents.
+    """
+    
+    plt.figure(figsize = (14, 7))
+
+    # Calculate cumulative training iterations
+    data1["Cumulative Iterations"] = data1["Rounds Played"].cumsum()
+    data2["Cumulative Iterations"] = data2["Rounds Played"].cumsum()
+
+    for stat in stats_to_plot:
+        if stat in data1.columns:
+            plt.plot(data1["Cumulative Iterations"], data1[stat] / data1["Rounds Played"], 
+                label = f"{label1} - {stat}")
+        else: 
+            print(f"Statistic {stat} not found in {label1} columns.")
+
+        if stat in data2.columns:
+            plt.plot(data2["Cumulative Iterations"], data2[stat] / data2["Rounds Played"], 
+                label = f"{label2} - {stat}")
+        else: 
+            print(f"Statistic {stat} not found in {label2} columns.")
+
+    plt.title("Statistics Comparison")
+    plt.xlabel("Cumulative training iterations")
+    plt.ylabel("Normalized Value per Round")
+    plt.legend()
+    plt.tight_layout()
+
+    plt.show()
+
+
+### Histogram
 def plot_action_histogram(data, actions_to_plot, row = -1):
     """
     Plot a histogram of the action distribution of selected row
@@ -72,12 +113,68 @@ def plot_action_histogram(data, actions_to_plot, row = -1):
 
     plt.show()
 
+### Comparison Histogram
+def compare_action_histogram(data1, data2, actions_to_plot, row, label1, label2):
+    """
+    Compare action distributions between two agents for the given row
+    """
+    if row >= len(data1) or row < -len(data1):
+        print(f"Invalid row index: {row}. Data only has {len(data1)} rows")
+        sys.exit(1)
+
+    if row >= len(data2) or row < -len(data2):
+        print(f"Invalid row index: {row}. Data only has {len(data2)} rows")
+        sys.exit(1)
+
+    row_data1 = data1.iloc[row]
+    row_data2 = data2.iloc[row]
+
+    action_counts1 = []
+    action_counts2 = []
+    
+    for action in actions_to_plot:
+        if action in data1.columns:
+            action_counts1.append(row_data1[action])
+        else:
+            print(f"Action {action} not found in {label1} columns.")
+        
+        if action in data2.columns:
+            action_counts2.append(row_data2[action])
+        else:
+            print(f"Action {action} not found in {label2} columns.")
+
+    # Plot histograms side by side for comparison
+    plt.figure(figsize=(10, 6))
+    
+    width = 0.35  # Width of bars
+    x = range(len(actions_to_plot))
+
+    plt.bar([i - width/2 for i in x], action_counts1, width=width, color='skyblue', label=label1)
+    plt.bar([i + width/2 for i in x], action_counts2, width=width, color='orange', label=label2)
+
+    plt.title(f"Action distribution comparison for Row {row if row >= 0 else 'Last'}")
+    plt.xlabel("Action")
+    plt.ylabel("Count")
+    plt.xticks(x, actions_to_plot)
+    plt.legend()
+    plt.tight_layout()
+
+    plt.show()
+
 def main():
     parser = argparse.ArgumentParser(description = "Visualize training statistics.")
-    parser.add_argument('--file-path', type = str, required = True, help = "Path to the training_stats.csv file.")
+
+    # Basic mode for a single agent
+    parser.add_argument('--agent1', type = str, required = True, help = "Name of the (first) agent under which to search for training_stats.csv file")
+
+    # Compare to second agent
+    parser.add_argument('--agent2', type = str, required = False, help = "Name of the second agent under which to search for training_stats.csv file")
 
     # Time series
     parser.add_argument('--stats', nargs = '+', help = "Select statistics to visualize over training iterations")
+
+    # Time series comparison
+    parser.add_argument('--stats-comparison', nargs = '+', help = "Select statistics to visualize and compare between agents")
 
     # Histogram
     parser.add_argument('--hist', nargs = '*', help = "Select action counts to visualize in histogram")
@@ -85,17 +182,37 @@ def main():
 
     args = parser.parse_args()
 
-    data = load_data(args.file_path)
+    # If only one agent, plot single-agent stats
+    if args.agent1 and not args.agent2:
+        data = load_data(args.agent1)
 
-    # Stats plot?
-    if args.stats:
-        plot_event_statistics(data, args.stats)
+        # Stats plot?
+        if args.stats:
+            plot_event_statistics(data, args.stats)
 
-    # Hist?
-    default_actions = ["MOVED_UP", "MOVED_DOWN", "MOVED_RIGHT", "MOVED_LEFT", "BOMB_DROPPED", "WAITED", "INVALID_ACTION"]
-    if args.hist is not None:
-        actions_to_plot = args.hist if args.hist else default_actions
-        plot_action_histogram(data, actions_to_plot, row = args.row)
+        # Hist?
+        if args.hist is not None:
+            default_actions = ["MOVED_UP", "MOVED_DOWN", "MOVED_RIGHT", "MOVED_LEFT", "BOMB_DROPPED", "WAITED", "INVALID_ACTION"]
+            actions_to_plot = args.hist if args.hist else default_actions
+            plot_action_histogram(data, actions_to_plot, row = args.row)
+
+    elif args.agent1 and args.agent2:
+        data1 = load_data(args.agent1)
+        data2 = load_data(args.agent2)
+
+        # Stats comparison plot?
+        if args.stats:
+            compare_event_statistics(data1, data2, args.stats, label1 = args.agent1, label2 = args.agent2)
+
+        # Comparison hist?
+        if args.hist is not None:
+            default_actions = ["MOVED_UP", "MOVED_DOWN", "MOVED_RIGHT", "MOVED_LEFT", "BOMB_DROPPED", "WAITED", "INVALID_ACTION"]
+            actions_to_plot = args.hist if args.hist else default_actions
+            compare_action_histogram(data1, data2, actions_to_plot, row = args.row, label1 = args.agent1, label2 = args.agent2)
+
+    else:
+        print("Please provide at least one agent for visualization.")
+
 
 if __name__ == "__main__":
     main()
