@@ -47,9 +47,12 @@ def state_to_features(game_state: dict) -> np.array:
 
     # Neighboring tiles
     neighboring_tiles_features = get_neighboring_tiles(own_position, game_state)
+
+    # Five tile features
+    five_tiles_features = get_five_tiles_features(own_position, game_state)
         
     features = np.concatenate([
-            neighboring_tiles_features # 4: up, right, down, left
+            five_tiles_features # 5: up, right, down, left, here
         ])
     #print(features)
 
@@ -57,6 +60,21 @@ def state_to_features(game_state: dict) -> np.array:
 
 
     return features
+
+def get_five_tiles_features(own_position, game_state):
+
+    # Neighboring_tiles
+    neighboring_tiles = np.array(get_neighboring_tiles(own_position, game_state) + [1])
+
+    # Bombs around
+    bomb_features = np.array(get_bomb_features(own_position, game_state))
+
+    five_tiles_features = neighboring_tiles * bomb_features
+
+    return five_tiles_features
+
+    #print("n", neighboring_tiles)
+    #print("b", bomb_features)
 
 # Get neighboring tiles
 ################## Variant 2.1.1
@@ -75,9 +93,73 @@ def get_neighboring_tiles(own_position, game_state):
 
     return neighboring_tiles
 
-# Check if I have bombs left
-def bombs_question_mark(game_state):
-    return [1] if game_state['self'][2] else [0]
+
+# Not walk into bombs
+################## Variant 1.1.1
+def get_bomb_features(own_position, game_state):
+
+    field = game_state['field']
+    rows, cols = field.shape
+    x, y = own_position
+
+    danger_map = np.zeros_like(field, dtype = float)
+
+    for bomb_pos, bomb_timer in game_state['bombs']:
+        bx, by = bomb_pos
+        danger_score = - 1 / bomb_timer if bomb_timer > 0 else - 2
+
+        #print("d", danger_score)
+
+        # Mark danger map
+        danger_map[bx, by] = bomb_timer
+        
+
+        # Mark explosion range (stop if wall)
+        # Up
+        for i in range(1, 4):
+            if by - i >= 0 and field[bx, by - i] >= 0: # No wall, mark danger
+                danger_map[bx, by - i] = danger_score
+                #print("ds", danger_score, "dm", danger_map[bx, by - i])
+            elif by - i >= 0 and field[bx, by - i] == - 1: # Wall, interrupt danger
+                break
+
+        # Right
+        for i in range(1, 4):
+            if bx + i < cols and field[bx + i, by] >= 0:
+                danger_map[bx + i, by] = danger_score
+            elif bx + i < cols and field[bx + i, by] == -1:
+                break
+
+        # down
+        for i in range(1, 4):
+            if by + i < rows and field[bx, by + i] >= 0: # No wall, mark danger
+                danger_map[bx, by + i] = danger_score
+            elif by + i < rows and field[bx, by + i] == - 1: # Wall, interrupt danger
+                break
+
+        # Left
+        for i in range(1, 4):
+            if bx - i >= 0 and field[bx - i, by] >= 0:
+                danger_map[bx - i, by] = danger_score
+            elif bx - i >= 0 and field[bx - i, by] == -1:
+                break
+
+        # Here
+        danger_map[bx, by] = danger_score
+
+    # Check if bomb in neighboring tiles
+    bomb_up = danger_map[x, y - 1] if y - 1 >= 0 else 0
+    bomb_right = danger_map[x + 1, y] if x < cols else 0
+    bomb_down = danger_map[x, y + 1] if y + 1 < rows else 0
+    bomb_left = danger_map[x - 1, y] if x - 1 >= 0 else 0
+    bomb_here = danger_map[x, y]
+    #print(danger_map)
+
+    bomb_features = [bomb_up, bomb_right, bomb_down, bomb_left, bomb_here]
+    #print("b", bomb_here)
+    #print(bomb_features)
+
+    return bomb_features
 
 
 # Determine whether or not there are any immediate escape routes
