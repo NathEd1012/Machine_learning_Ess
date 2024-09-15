@@ -5,7 +5,7 @@ import pickle
 from typing import List
 import time
 import events as e
-from .callbacks import state_to_features
+from .callbacks import state_to_features, get_bomb_features, get_danger_map
 import numpy as np
 
 import sys
@@ -35,10 +35,10 @@ class ReplayBuffer:
 
 
 # Hyperparameters
-LEARNING_RATE = 0.1
-DISCOUNT_FACTOR = 0.99
+LEARNING_RATE = 0.0003
+DISCOUNT_FACTOR = 0.6
 DECAY_RATE = 0.99
-TRANSITION_HISTORY_SIZE = 10
+TRANSITION_HISTORY_SIZE = 20
 
 # Data log
 LOG_FREQUENCY = 10
@@ -65,7 +65,7 @@ def setup_training(self):
     self.DISCOUNT_FACTOR = DISCOUNT_FACTOR
 
     # Initialize replay buffer
-    self.replay_buffer = ReplayBuffer(capacity = 10000)
+    self.replay_buffer = ReplayBuffer(capacity = 5000)
     self.batch_size = 64
 
 
@@ -118,6 +118,10 @@ def train_dqn(self):
     # Perform gradient descent
     self.optimizer.zero_grad()
     loss.backward()
+
+    # Gradient clipping
+    torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
+
     self.optimizer.step()
 
     # Log the losss
@@ -132,6 +136,28 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
     # 
     old_state_features = state_to_features(old_game_state)
     new_state_features = state_to_features(new_game_state)
+
+    # Penalize if standing on bomb place
+    own_position = new_game_state['self'][3]
+    bomb_danger_here = get_bomb_features(own_position, new_game_state)[4]
+    if bomb_danger_here == - 1 / 3:
+        events.append("WARM")
+    elif bomb_danger_here == - 1 / 2:
+        events.append("HOT")
+    elif bomb_danger_here == - 1:
+        events.append("BOILING")
+
+    # Reward moving out of danger
+    previous_pos = old_game_state['self'][3]
+    previous_danger_map = get_danger_map(old_game_state)
+    previous_danger = previous_danger_map[previous_pos[0], previous_pos[1]]
+
+    current_pos = new_game_state['self'][3]
+    current_danger_map = get_danger_map(new_game_state)
+    current_danger = current_danger_map[current_pos[0], current_pos[1]]
+
+    if current_danger == 0 and  previous_danger < 0: # Think: values are negative, so pd < 0 bad.
+        events.append("FRESHENED_UP")
 
     # Calculate rewards and accumulate them
     reward = reward_from_events(self, events)
@@ -151,6 +177,7 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
     self.stat_logger.update_action_count(self_action)
     self.stat_logger.update_score(new_game_state["self"][1])
     self.stat_logger.update_reward(reward)
+
 
 
 
@@ -176,7 +203,7 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
 
 
     # Log data
-    reward = reward_from_events(self, events)
+    reward = reward_from_events(self, events) # Repeat last_game_state
     self.stat_logger.total_reward += reward
 
     self.stat_logger.update_event_count(events)
@@ -189,33 +216,37 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
         self.stat_logger.log_statistics()
 
 
-def reward_from_events(self, events: List[str]) -> int:
+def reward_from_events(self, events: List[str]):
     """
     Modify the rewards your agent gets to encourage certain behavior.
     """
     game_rewards = {
-        #e.COIN_COLLECTED: 1,
-        #e.KILLED_OPPONENT: 5,
-        #e.MOVED_LEFT: -0.01,
-        #e.MOVED_RIGHT: -0.01,
-        #e.MOVED_UP: -0.01,
-        #e.MOVED_DOWN: -0.01,
-        e.INVALID_ACTION: -1,
+        e.INVALID_ACTION: -0.5,
         e.MOVED_LEFT: 0.1,
         e.MOVED_RIGHT: 0.1,
         e.MOVED_UP: 0.1,
         e.MOVED_DOWN: 0.1,
-        e.WAITED: -0.2,
-        e.KILLED_SELF: -50,
-        e.BOMB_DROPPED: 5,
-        e.SURVIVED_ROUND: 50
-        #e.GOT_KILLED: -5,
-        #e.CRATE_DESTROYED: 0.5,
-        #e.COIN_FOUND: 0.25,
+        e.KILLED_SELF: -5,
+        e.BOMB_DROPPED: 0.3,
+        e.SURVIVED_ROUND: 5,
+        e.COIN_COLLECTED: 1,
+        e.CRATE_DESTROYED: 0.5,
+        # Custom events
+        e.COOL: 0.1,
+        e.WARM: - 0.2,
+        e.HOT: -0.3,
+        e.BOILING: -0.5,
+        e.FRESHENED_UP: 0.2
     }
     reward_sum = 0
+
+    # Event based rewards
     for event in events:
         if event in game_rewards:
             reward_sum += game_rewards[event]
+
     self.logger.info(f"Awarded {reward_sum} for events {', '.join(events)}")
+
+
+
     return reward_sum

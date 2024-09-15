@@ -188,3 +188,157 @@ we will adjust the rewards to reinforce this behavior.
             e.KILLED_SELF: -50,
             e.BOMB_DROPPED: 5,
             e.SURVIVED_ROUND: 50
+
+        The Loss is exploding, so we will reduce the learning rate in the next session.
+
+        #### Fifth training session: xx (stats/ts-2-2-1-5.csv)
+
+        LEARNING_RATE = 0.1 -> 0.01
+
+        The loss continues growing exponentially. After a certain point, the exponential growth stops
+        and instead flattens out. In the gameplay, the agent learns to immediately drop a bomb and kill itself.
+
+        We save the statistics from 2.2.1 in training_stats-2-2-1.csv and begin again
+
+    ################## Variant 2.2.2
+
+    In Variant 2.2.2 we will test out, whether or not clipping the gradient stops it from rising exponentially. 
+    We have decided to keep the features as a concatenation of neighboring_tiles, bomb_features, because otherwise they could
+    potentially be too difficult to learn. We also switch the rewards to
+
+        e.INVALID_ACTION: -5,
+        e.MOVED_LEFT: 1,
+        e.MOVED_RIGHT: 1,
+        e.MOVED_UP: 1,
+        e.MOVED_DOWN: 1,
+        e.WAITED: -2,
+        e.KILLED_SELF: -50,
+        e.BOMB_DROPPED: 5,
+        e.SURVIVED_ROUND: 50
+
+    The conclusion is that we need to change the approach. After many sessions the agent hasn't learned the appropriate
+    behavior and the gradient keeps exploding. 
+
+################## Variant 2.3
+
+Instead of incrementally adding information, we will try to create a more robust feature in the first place. For this, we will 
+create new events to include in the calculation of the reward. 
+
+In general: We want the agent to learn the following things at once:
+
+-> Not die
+-> Collect coins
+-> Destroy crates
+
+    To not die, we include the new events:
+        "COOL", "WARM", "HOT", "BOILING" to describe the danger level of the agent in the current tile.
+        "FRESHENED_UP" describes if the agent moves out of danger.
+    We as well reward and penalize these events appropriately.
+
+    To collect coins, we only include one single feature: using a bfs algorithm to the
+    direction of the next target (coin, crate, later enemy) and include what would be the 
+    next best move: 0, 1, 2, 3 for up, right, down, left or -1 for no valid move. since
+    the algorithm is updated after every move, there is no need to include more information than
+    the next step. 
+
+    We will deal with the destruction of crates in the next update. 
+
+    ################## Variant 2.3.1
+
+    We begin with the following rewards:
+
+        e.INVALID_ACTION: -0.5,
+        e.MOVED_LEFT: 0.1,
+        e.MOVED_RIGHT: 0.1,
+        e.MOVED_UP: 0.1,
+        e.MOVED_DOWN: 0.1,
+        e.KILLED_SELF: -5,
+        e.BOMB_DROPPED: 0.3,
+        e.SURVIVED_ROUND: 5,
+        e.COIN_COLLECTED: 1,
+        e.CRATE_DESTROYED: 0.5,
+        # Custom events
+        e.COOL: 0.1,
+        e.WARM: - 0.2,
+        e.HOT: -0.3,
+        e.BOILING: -0.5,
+        e.FRESHENED_UP: 0.2
+
+    and the features we implemented are:
+
+        features = np.concatenate([
+            neighboring_tiles_features, # 4: up, right, down, left
+            bomb_features, # 5: up, right, down, left, here
+            next_move_coin_features, # 1: in which direction does the bfs say we should go for coin
+            #next_move_crate_features, # 1: in which direction does the bfs say we should go for crate
+        ])
+
+    where we determined next_move_coin_features using a bfs algorithm:
+
+        def get_path_bfs(game_state, target_types =['coin', 'crate', 'enemy']):
+            """
+            Using breadth-first-search, we want to determine the shortest path to our target.
+            Since there are walls and crates, this could make it complicated as a feature. 
+            For that reason, only return the next step: up, right, down, left
+            """
+            # dx, dy
+            directions = [(0, -1), (1, 0), (0, 1), (-1, 0)]
+            direction_names = [0, 1, 2, 3] # up, right, down, left
+
+            # Own position and field
+            field = game_state['field']
+            start_x, start_y = game_state['self'][3]
+
+            rows, cols = field.shape
+            visited = set() # Keep track of tiles already visited
+
+            # BFS queue: stores (x, y, first_move) where first_move is initial direction
+            queue = deque([(start_x, start_y, None)])  
+            visited.add((start_x, start_y))  
+
+            # Get target positions (coins, crates, enemies)
+            targets = []
+            if 'coin' in target_types:
+                targets.extend(game_state['coins'])
+            if 'crate' in target_types:
+                targets.extend((x, y) for x in range(rows) for y in range(cols) if field[x, y] == 1)
+            if 'enemy' in target_types:
+                targets.extend(enemy[3] for enemy in game_state['others'])
+
+            # BFS to find shortest path
+            while queue:
+                x, y, first_move = queue.popleft()
+
+                # Check if reached target
+                if (x, y) in targets:
+
+                    if first_move is not None:
+                        #print(first_move, direction_names)
+                        return [direction_names[first_move]]
+
+                # Explore neighboring tiles
+                for i, (dx, dy) in enumerate(directions):
+                    new_x, new_y = x + dx, y + dy
+
+                    # Check if new position within bounds and not visited
+                    if 0 <= new_x < rows and 0 <= new_y < cols and (new_x, new_y) not in visited:
+                        if field[new_x, new_y] == 0: # Free tile
+                            visited.add((new_x, new_y))
+                            # Enque new position, passing first move
+                            if first_move is None:
+                                queue.append((new_x, new_y, direction_names[i]))
+                            else:
+                                queue.append((new_x, new_y, first_move))
+
+            # Return if no path to target
+            return [-1] # No valid move
+
+    ---------> Results: 
+
+
+
+
+
+
+
+

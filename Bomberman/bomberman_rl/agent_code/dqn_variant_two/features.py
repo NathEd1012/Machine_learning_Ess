@@ -1,6 +1,7 @@
 # This file contains the state_to_features function
 from .callbacks import ACTIONS
 import numpy as np
+from collections import deque
 
 import importlib.util
 import os
@@ -48,33 +49,24 @@ def state_to_features(game_state: dict) -> np.array:
     # Neighboring tiles
     neighboring_tiles_features = get_neighboring_tiles(own_position, game_state)
 
-    # Five tile features
-    five_tiles_features = get_five_tiles_features(own_position, game_state)
-        
-    features = np.concatenate([
-            five_tiles_features # 5: up, right, down, left, here
-        ])
-    #print(features)
+    # Neighboring bombs
+    bomb_features = get_bomb_features(own_position, game_state)    
 
-    #print(len(features))
+    # Next move to target: coin
+    next_move_coin_features = get_path_bfs(game_state, target_types = ['coin'])
+
+    # Next move to target: crate
+    #next_move_crate_features = get_path_bfs(game_state, target_types = ['crate'])
+
+    features = np.concatenate([
+            neighboring_tiles_features, # 4: up, right, down, left
+            bomb_features, # 5: up, right, down, left, here
+            next_move_coin_features, # 1: in which direction does the bfs say we should go for coin
+            #next_move_crate_features, # 1: in which direction does the bfs say we should go for crate
+        ])
 
 
     return features
-
-def get_five_tiles_features(own_position, game_state):
-
-    # Neighboring_tiles
-    neighboring_tiles = np.array(get_neighboring_tiles(own_position, game_state) + [1])
-
-    # Bombs around
-    bomb_features = np.array(get_bomb_features(own_position, game_state))
-
-    five_tiles_features = neighboring_tiles * bomb_features
-
-    return five_tiles_features
-
-    #print("n", neighboring_tiles)
-    #print("b", bomb_features)
 
 # Get neighboring tiles
 ################## Variant 2.1.1
@@ -93,7 +85,6 @@ def get_neighboring_tiles(own_position, game_state):
 
     return neighboring_tiles
 
-
 # Not walk into bombs
 ################## Variant 1.1.1
 def get_bomb_features(own_position, game_state):
@@ -108,18 +99,14 @@ def get_bomb_features(own_position, game_state):
         bx, by = bomb_pos
         danger_score = - 1 / bomb_timer if bomb_timer > 0 else - 2
 
-        #print("d", danger_score)
-
         # Mark danger map
         danger_map[bx, by] = bomb_timer
         
-
         # Mark explosion range (stop if wall)
         # Up
         for i in range(1, 4):
             if by - i >= 0 and field[bx, by - i] >= 0: # No wall, mark danger
                 danger_map[bx, by - i] = danger_score
-                #print("ds", danger_score, "dm", danger_map[bx, by - i])
             elif by - i >= 0 and field[bx, by - i] == - 1: # Wall, interrupt danger
                 break
 
@@ -144,152 +131,102 @@ def get_bomb_features(own_position, game_state):
             elif bx - i >= 0 and field[bx - i, by] == -1:
                 break
 
-        # Here
-        danger_map[bx, by] = danger_score
-
     # Check if bomb in neighboring tiles
     bomb_up = danger_map[x, y - 1] if y - 1 >= 0 else 0
     bomb_right = danger_map[x + 1, y] if x < cols else 0
     bomb_down = danger_map[x, y + 1] if y + 1 < rows else 0
     bomb_left = danger_map[x - 1, y] if x - 1 >= 0 else 0
-    bomb_here = danger_map[x, y]
-    #print(danger_map)
-
+    bomb_here = - 1 / danger_map[x, y] if danger_map[x, y] > 0 else - 2
+    
     bomb_features = [bomb_up, bomb_right, bomb_down, bomb_left, bomb_here]
-    #print("b", bomb_here)
-    #print(bomb_features)
 
     return bomb_features
 
 
-# Determine whether or not there are any immediate escape routes
-def escape_routes(game_state, own_position):
+def get_danger_map(game_state):
     """
-    Check if there is an immediate safe tile around the player
-    """
-    field = game_state['field']
-    x, y = own_position
-    rows, cols = field.shape
-
-    escape_directions = [
-        (x + 1, y),
-        (x - 1, y),
-        (x, y + 1),
-        (x, y - 1)
-    ]
-
-    # Return 1 if at least 1 safe space
-    for nx, ny in escape_directions:
-        if 0 <= nx < rows and 0 <= ny < cols and field[nx, ny] == 0:
-            return [1]
-    return [0]
-
-# Strategic bombing: determine how many crates would a bomb destroy?
-def crates_in_bomb_range(game_state, own_position):
-    x, y = own_position
-    field = game_state['field']
-    rows, cols = field.shape
-    crates_destroyed = 0
-
-    for i in range(1, 4):
-        if x + i < rows and field[x + i, y] == 1:
-            crates_destroyed += 1
-        if x - i >= 0 and field[x - i, y] == 1:
-            crates_destroyed += 1
-        if y + i < cols and field[x, y + i] == 1:
-            crates_destroyed += 1
-        if y - i >= 0 and field[x, y - i] == 1:
-            crates_destroyed += 1
-
-    return [crates_destroyed]
-
-
-# Determine the field around the agent
-def field_field_of_view(game_state, own_position, radius = FIELD_OF_VIEW):
-    """
-    The field around the agent, only a 3x3 (Manhattan) area around the agent
+    Returns a map showing the danger level of each tile based on the
+    explosion range of bombs and their timers.
     """
     field = game_state['field']
-    x, y = own_position
     rows, cols = field.shape
+    danger_map = np.zeros_like(field, dtype=float)
 
-    # Empty list to store local grid
-    local_view = []
-
-    # Iterate through area around agent:
-    for dx in range(-radius, radius + 1):
-        for dy in range(-radius, radius + 1):
-            nx, ny = x + dx, y + dy
-            if 0 <= nx < rows and 0 <= ny < cols:
-                local_view.append(field[nx, ny])
-            else:
-                local_view.append(-1)
-
-    return np.array(local_view)
-
-
-# Determine the directions in which there is danger
-def directional_danger(player_pos, danger_map, bomb_info):
-    # Consider in which directions possible bombs will explode
-    x, y = player_pos
-    rows, cols = danger_map.shape
-    danger_up = danger_down = danger_left = danger_right = danger_here = 0
-
-    # Check each bomb
-    for bomb_pos, bomb_ticks in bomb_info:
+    for bomb_pos, bomb_timer in game_state['bombs']:
         bx, by = bomb_pos
+        danger_score = -1 / bomb_timer if bomb_timer > 0 else -2  # Adjust danger score by bomb timer
 
-        # Manhattan distance between bomb and player
-        dist_x = abs(bx - x)
-        dist_y = abs(by - y)
+        # Mark bomb position danger
+        danger_map[bx, by] = danger_score
 
-        # If bomb exploding: bomb_ticks == 0
-        danger_value = 1 / max(bomb_ticks, 1)
-
-        # If bomb in same row or column and within explosion range
-        if bx == x and dist_y <= 3:
-            if by > y:
-                danger_up = max(danger_up, danger_value) # danger bomb timer
-            elif by < y:
-                danger_down = max(danger_down, danger_value)
-
-        if by == y and dist_x <= 3:
-            if bx > x: 
-                danger_right = max(danger_right, danger_value)
-            elif bx < x:
-                danger_left = max(danger_left, danger_value)
-
-        if bx == x and y == by:
-            danger_here = danger_value
-
-    return danger_up, danger_down, danger_left, danger_right, danger_here
-
-
-def danger_zone(game_state):
-    danger_map = np.zeros_like(game_state['field'])
-    bombs = game_state['bombs']
-    field = game_state['field']
-    rows, cols = field.shape
-
-    # Iterate over bombs in field
-    for bomb in bombs:
-        bomb_pos, bomb_countdown = bomb
-        x, y = bomb_pos
-
-        # Mark danger zones
-        if bomb_countdown <= 3:
-            danger_map[x, y] = bomb_countdown
-
-            # Mark up to 3 tiles in all directions w/out walls
-            # Check the field boundary as well
-            for i in range(1, 4):
-                if x + i < rows and field[x + i, y] == 0: # Free space
-                    danger_map[x + i, y] = bomb_countdown
-                if y - i >= 0 and field[x - i, y] == 0:
-                    danger_map[x - i, y] = bomb_countdown
-                if y + i < cols and field[x, y + i] == 0:
-                    danger_map[x, y + i] = bomb_countdown
-                if y - i >= 0 and field[x, y - i] == 0:
-                    danger_map[x, y - i] = bomb_countdown
+        # Mark explosion radius (stop at walls)
+        for i in range(1, 4):
+            if by - i >= 0 and field[bx, by - i] >= 0:  # Up
+                danger_map[bx, by - i] = min(danger_map[bx, by - i], danger_score)
+            if bx + i < cols and field[bx + i, by] >= 0:  # Right
+                danger_map[bx + i, by] = min(danger_map[bx + i, by], danger_score)
+            if by + i < rows and field[bx, by + i] >= 0:  # Down
+                danger_map[bx, by + i] = min(danger_map[bx, by + i], danger_score)
+            if bx - i >= 0 and field[bx - i, by] >= 0:  # Left
+                danger_map[bx - i, by] = min(danger_map[bx - i, by], danger_score)
 
     return danger_map
+
+
+def get_path_bfs(game_state, target_types =['coin', 'crate', 'enemy']):
+    """
+    Using breadth-first-search, we want to determine the shortest path to our target.
+    Since there are walls and crates, this could make it complicated as a feature. 
+    For that reason, only return the next step: up, right, down, left
+    """
+    # dx, dy
+    directions = [(0, -1), (1, 0), (0, 1), (-1, 0)]
+    direction_names = [0, 1, 2, 3] # up, right, down, left
+
+    # Own position and field
+    field = game_state['field']
+    start_x, start_y = game_state['self'][3]
+
+    rows, cols = field.shape
+    visited = set() # Keep track of tiles already visited
+
+    # BFS queue: stores (x, y, first_move) where first_move is initial direction
+    queue = deque([(start_x, start_y, None)])  
+    visited.add((start_x, start_y))  
+
+    # Get target positions (coins, crates, enemies)
+    targets = []
+    if 'coin' in target_types:
+        targets.extend(game_state['coins'])
+    if 'crate' in target_types:
+        targets.extend((x, y) for x in range(rows) for y in range(cols) if field[x, y] == 1)
+    if 'enemy' in target_types:
+        targets.extend(enemy[3] for enemy in game_state['others'])
+
+    # BFS to find shortest path
+    while queue:
+        x, y, first_move = queue.popleft()
+
+        # Check if reached target
+        if (x, y) in targets:
+
+            if first_move is not None:
+                #print(first_move, direction_names)
+                return [direction_names[first_move]]
+
+        # Explore neighboring tiles
+        for i, (dx, dy) in enumerate(directions):
+            new_x, new_y = x + dx, y + dy
+
+            # Check if new position within bounds and not visited
+            if 0 <= new_x < rows and 0 <= new_y < cols and (new_x, new_y) not in visited:
+                if field[new_x, new_y] == 0: # Free tile
+                    visited.add((new_x, new_y))
+                    # Enque new position, passing first move
+                    if first_move is None:
+                        queue.append((new_x, new_y, direction_names[i]))
+                    else:
+                        queue.append((new_x, new_y, first_move))
+
+    # Return if no path to target
+    return [-1] # No valid move

@@ -210,3 +210,49 @@ we will adjust the rewards to reinforce this behavior.
             e.KILLED_SELF: -50,
             e.BOMB_DROPPED: 5,
             e.SURVIVED_ROUND: 50
+
+        The Loss is exploding, so we will reduce the learning rate in the next session.
+
+        #### Fifth training session: 2024-09-11 21:05:39 (stats/ts-1-2-1-5.csv)
+
+        The loss continues growing exponentially. In the gameplay, the agent learns to immediately drop a bomb and kill itself. 
+        At this point, it's also clear due to the training time, that dqn_v1 immediately dies. We will then experiment with a new 
+        strategy. We will implement dqn_v2 and test out different strategies to first fight against the exploding gradient.
+
+        We save the statistics from 2.2.1 in training_stats-1-2-1.csv and begin again
+
+    ################## Variant 1.2.2
+
+    In Variant 1.2.2 we will test out, whether or not modifying the learning rate achieves significant results to fight the exploding
+    gradient. We have decided to keep the features as a concatenation of neighboring_tiles, bomb_features, because otherwise they could
+    potentially be too difficult to learn. We also switch the rewards to
+
+        e.INVALID_ACTION: -5,
+        e.MOVED_LEFT: 1,
+        e.MOVED_RIGHT: 1,
+        e.MOVED_UP: 1,
+        e.MOVED_DOWN: 1,
+        e.WAITED: -2,
+        e.KILLED_SELF: -50,
+        e.BOMB_DROPPED: 5,
+        e.SURVIVED_ROUND: 50
+
+        ---------> Results: 
+            #### First training session: 2024-09-14 15:41:21 (stats/ts-1-2-2-1.csv)
+
+            LEARNING_RATE = 0.01
+
+            Exploding gradient, no learned behaviors
+
+    The conclusion is that we need to change the approach. After many sessions the agent hasn't learned the appropriate
+    behavior and the gradient keeps exploding. 
+
+    ################## Variant 1.2.3
+
+    Instead of incrementally adding information, we will try to create a more robust feature in the first place. For this, we will 
+    create new events to include in the calculation of the reward. 
+
+    "WARM", "HOT", "BOILING" describe the danger level of the agent in the current tile
+
+
+        

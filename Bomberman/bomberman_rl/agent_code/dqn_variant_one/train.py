@@ -35,7 +35,7 @@ class ReplayBuffer:
 
 
 # Hyperparameters
-LEARNING_RATE = 0.1
+LEARNING_RATE = 0.001
 DISCOUNT_FACTOR = 0.99
 DECAY_RATE = 0.99
 TRANSITION_HISTORY_SIZE = 10
@@ -115,9 +115,14 @@ def train_dqn(self):
     # Compute loss
     loss = self.loss_fn(q_values, q_targets)
 
+    # Training loop
     # Perform gradient descent
     self.optimizer.zero_grad()
     loss.backward()
+
+    # Gradient clipping
+    #torch.nn.utils.clip_grad_norm(self.model.parameters(), max_norm = 1.0)
+
     self.optimizer.step()
 
     # Log the losss
@@ -196,12 +201,12 @@ def reward_from_events(self, events: List[str]) -> int:
     game_rewards = {
         #e.COIN_COLLECTED: 1,
         #e.KILLED_OPPONENT: 5,
-        e.INVALID_ACTION: -1,
-        e.MOVED_LEFT: 0.1,
-        e.MOVED_RIGHT: 0.1,
-        e.MOVED_UP: 0.1,
-        e.MOVED_DOWN: 0.1,
-        e.WAITED: -0.2,
+        e.INVALID_ACTION: -5,
+        e.MOVED_LEFT: 1,
+        e.MOVED_RIGHT: 1,
+        e.MOVED_UP: 1,
+        e.MOVED_DOWN: 1,
+        e.WAITED: -2,
         e.KILLED_SELF: -50,
         e.BOMB_DROPPED: 5,
         e.SURVIVED_ROUND: 50
