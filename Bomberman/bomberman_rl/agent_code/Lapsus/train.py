@@ -1,18 +1,28 @@
-import os
-import random
-import copy
-import torch
-import numpy as np
-
-import events as e
-
 from typing import List
-from collections import deque
-from .callbacks import state_to_features, get_bomb_features, get_danger_map
 from .model import Lapsus
 
+import csv
+import os
+import copy
+from collections import namedtuple, deque, defaultdict
+import pickle
+from typing import List
+import time
+import events as e
+from .features import state_to_features
+import numpy as np
 
-ACTIONS = {'UP':0, 'RIGHT':1, 'DOWN':2, 'LEFT':3, 'WAIT':4, 'BOMB':5}
+import sys
+import argparse
+
+import random
+
+import torch
+
+#from .training_logger import TrainingLogger
+
+
+ACTIONS_idx = {'UP':0, 'RIGHT':1, 'DOWN':2, 'LEFT':3, 'WAIT':4, 'BOMB':5}
 
 def add_exp(self, old_game_state, self_action, new_game_state, events, done):
     """
@@ -20,9 +30,9 @@ def add_exp(self, old_game_state, self_action, new_game_state, events, done):
     done is a boolean, only true if episode has ended (max. amount of steps or agent died)
     each tuple = (old feature vector, performed action, total reward for detected events, new feature vector)
     """
+    new_features = state_to_features(new_game_state)    
     old_features = state_to_features(old_game_state)
-    new_features = state_to_features(new_game_state)
-    action = ACTIONS[self_action]
+    action = ACTIONS_idx[self_action]
     reward = reward_from_events(events)
 
     self.exp_buffer.append((old_features, action, reward, new_features, done))
@@ -37,6 +47,9 @@ def train_net(self):
     batch = random.sample(self.exp_buffer, self.batch_size)
 
     states, actions, rewards, next_states, dones = zip(*batch)
+
+    if any(state is None for state in next_states):
+        next_states = [np.zeros_like(states[0])] * len(states)
 
     # convert quantities to torch tensors 
     states = torch.tensor(np.array(states), dtype=torch.float)
@@ -140,7 +153,7 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
         self.logger.info('Model saved.')
         self.logger.info(f'Total rewards this game:{sum(self.reward_history)}')
 
-    add_exp(self, last_game_state, last_action, 0, events, done=True)
+    add_exp(self, last_game_state, last_action, None, events, done=True)
     train_net(self)
 
     
@@ -152,20 +165,26 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
 
 def reward_from_events(events: List[str]):
     """
-    calculate total reward from events
+    Modify the rewards your agent gets to encourage certain behavior.
     """
     game_rewards = {
-        e.COIN_COLLECTED: 50,
-        e.KILLED_OPPONENT: 125,
-        e.MOVED_RIGHT: -1,
-        e.MOVED_LEFT: -1,
-        e.MOVED_UP: -1,
-        e.MOVED_DOWN: -1,
-        e.WAITED: -1,
-        e.INVALID_ACTION: -20,
-        e.BOMB_DROPPED: -1,
-        e.KILLED_SELF: -10,
-        e.GOT_KILLED: -70,
+        e.INVALID_ACTION: -0.05,
+        e.MOVED_LEFT: 0.01,
+        e.MOVED_RIGHT: 0.01,
+        e.MOVED_UP: 0.01,
+        e.MOVED_DOWN: 0.01,
+        e.WAITED: -0.02,
+        e.KILLED_SELF: -5,
+        # e.BOMB_DROPPED: 0.05,
+        e.SURVIVED_ROUND: 4,
+        e.COIN_COLLECTED: 1,
+        e.CRATE_DESTROYED: 0.3,
     }
-    reward = sum(game_rewards.get(event, 0) for event in events)
-    return reward
+    reward_sum = 0
+
+    # Event based rewards
+    for event in events:
+        if event in game_rewards:
+            reward_sum += game_rewards[event]
+            
+    return reward_sum

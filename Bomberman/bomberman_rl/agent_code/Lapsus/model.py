@@ -5,7 +5,7 @@ import torch.optim as optim
 import torch.nn.functional as F 
 
 class Lapsus(nn.Module):
-    def __init__(self, input_size = 10, number_actions= 6, alpha=0.005):
+    def __init__(self, input_size = 12, number_actions= 6, alpha=0.005):
         super(Lapsus, self).__init__()
         
         # first and last layer number of neuros
@@ -13,8 +13,8 @@ class Lapsus(nn.Module):
         self.number_actions = number_actions
 
         # fully connected layers
-        self.fc1 = nn.Linear(self.input_size, 20)
-        self.fc2 = nn.Linear(20, self.number_actions)
+        self.fc1 = nn.Linear(self.input_size, 100)
+        self.fc2 = nn.Linear(100, self.number_actions)
 
         # MSE for loss function
         self.loss_function = nn.MSELoss()

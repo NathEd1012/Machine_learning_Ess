@@ -1,11 +1,11 @@
 import os
 import torch
+import pickle
 import random
 import numpy as np
 
 from .model import Lapsus
-from .features import state_to_features, get_bomb_features, get_danger_map
-
+from .features import state_to_features
 
 ACTIONS = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT', 'BOMB']
 
@@ -35,7 +35,7 @@ def act(self, game_state):
     if not in training max. execution time is 0.5s
     """
     features_tensor = torch.tensor(state_to_features(game_state), dtype=torch.float32)
-    best_action = torch.argmax(features_tensor)
+    best_action = torch.argmax(self.policy_net(features_tensor))
 
     # epsilon-greedy policy in training
     if self.train:
