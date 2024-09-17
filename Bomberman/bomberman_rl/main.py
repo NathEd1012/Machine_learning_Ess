@@ -175,6 +175,8 @@ def main(argv = None):
         gui = GUI(world)
     else:
         gui = None
+
+    
     world_controller(world, args.n_rounds,
                      gui=gui, every_step=every_step, turn_based=args.turn_based,
                      make_video=args.make_video, update_interval=args.update_interval)

@@ -26,8 +26,7 @@ class Maverick(nn.Module):
 
     def forward(self, x):
         x = F.relu((self.dense(x)))
-        out = self.out(x)
-        return out
+        return self.out(x)
 
     def initialize_training(self, 
                 alpha,

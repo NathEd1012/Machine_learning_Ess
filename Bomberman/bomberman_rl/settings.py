@@ -25,6 +25,10 @@ SCENARIOS = {
     "classic": {
         "CRATE_DENSITY": 0.75,
         "COIN_COUNT": 9
+    },
+    "mostly-empty": {
+        "CRATE_DENSITY": 0.2,
+        "COIN_COUNT": 0
     }
     # Feel free to add more game modes and properties
     # game is created in environment.py -> BombeRLeWorld -> build_arena()
@@ -69,4 +73,4 @@ INPUT_MAP = {
 LOG_GAME = logging.INFO
 LOG_AGENT_WRAPPER = logging.INFO
 LOG_AGENT_CODE = logging.DEBUG
-LOG_MAX_FILE_SIZE = 100 * 1024 * 1024  # 100 MB
+LOG_MAX_FILE_SIZE = 10 * 1024 * 1024  # 100 MB
