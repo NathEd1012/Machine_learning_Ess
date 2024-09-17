@@ -39,7 +39,8 @@ def setup(self):
     self.EPSILON = EPSILON
 
     # Input-output sizes
-    input_size = 10 # 4: neighboring_tiles_features, 5: bomb_features, 1: next_move_features
+    input_size = 12 # 4: neighboring_tiles_features, 5: bomb_features, 1: next_move_coin_features, 
+    # 1: next_move_crate_features, 1: how_many_crates_boom
     output_size = len(ACTIONS)
 
     # Initialize DQN

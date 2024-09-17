@@ -139,13 +139,13 @@ from the possible actions, to avoid having that as an Invalid Action.
                 return neighboring_tiles
 
 
-################## Variant 1.2
+################## Variant 2.2
 
 On Phase 2: We want to teach the agent how to avoid walking into bombs it placed itself. So, the agent Should
 have access to features that inform it about the explosion map and the impending danger after bombs. Likewise,
 we will adjust the rewards to reinforce this behavior.
 
-    ################## Variant 1.2.1
+    ################## Variant 2.2.1
 
     We will try to incorporate the information about whether or not a bomb is going to explode into the same 4 (+1) 
     features of neighboring_tiles. By including the information of the type of tile it is with the minus sign, we hope 
@@ -469,7 +469,7 @@ In general: We want the agent to learn the following things at once:
 
     Nope.
 
-    #### 13. training session: (stats/ts-2-3-13.csv)
+    #### 13th training session: (stats/ts-2-3-13.csv)
 
     We include in the code a snippet that will automatically save the best performing model:
 
@@ -483,3 +483,57 @@ In general: We want the agent to learn the following things at once:
         torch.save(self.model.state_dict(), "best-model.pt")
 
     This will allow us to learn what we need to learn without worrying too much about unlearning.
+
+
+    During this training round, we achieved an agent that performs COIN_COLLECTION nearly perfectly, but hasn't 
+    quite mastered not dying. It manages to survive roughly 50% of the time and I believe only manages so
+    because it randomly avoids the bombs by having such a tight focus on the coins, that it's automatically
+    led away from the explosion range. During the first session (2024-09-17 10:45:16), the agent didn't unlearn the expected behavior.
+    The first thing we'll do is have it train for another 2000 rounds to see if this remains the case.
+
+    Indeed, it was not a stable optimum. After an additional 1000 rounds it unlearns the behaviors, the loss diverges,
+    and it begins killing itself within the first moves.
+
+    We save the best performing model (bm-2-3-13-1) and the final model (2-3-13-1).
+
+    In the game play, the best performing model seamlessly gathers every coin in a very effcient route.
+    The final (unlearned) model exclusively waits. Does not drop bombs nor moves, it just waits until it survives
+    the round to get that reward. 
+
+    #### 14th training session: (stats/ts-2-3-14.csv)
+
+    For the next iteration, let us try reducing the reward for surviving and penalize waiting again,
+    additionally, let us remove the reward for dropping a bomb, to see if this helps the problem of senseless bombing.
+
+        e.INVALID_ACTION: -0.05,
+        e.MOVED_LEFT: 0.02,
+        e.MOVED_RIGHT: 0.02,
+        e.MOVED_UP: 0.02,
+        e.MOVED_DOWN: 0.02,
+        -> e.WAITED: -0.02,
+        e.KILLED_SELF: -5,
+        #e.BOMB_DROPPED: 0.05,
+        e.SURVIVED_ROUND: 5 -> 4,
+        e.COIN_COLLECTED: 1,
+        #e.CRATE_DESTROYED: 0.5,
+        # Custom events
+        e.COOL: 0.01,
+        e.WARM: - 0.02,
+        e.HOT: -0.05,
+        e.BOILING: -0.1,
+        e.FRESHENED_UP: 0.1
+
+    Nope, it doesn't. Similar behavior to previous iterations.
+
+################## Variant 2.4
+
+So, we can't currently solve the convergence issue and the unlearning. Maybe it's because the game is currently not balanced properly.
+Let us try simultaneously adding crate features, such that it learns to destroy crates, hopefully this way it will learn to avoid bombs.
+
+    ################## Variant 2.4.1
+
+    Crate features: Similarly to coins, we want to determine where the next crate is, but in this case, we can't actually walk on 
+    the tile of the crate itself, so it will not work with our current path-finding algorithm
+
+    ---------> Results: 
+        #### First training session: 2024-09-11 10:03:42 (stats/ts-2-1-2-1.csv)
