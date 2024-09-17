@@ -537,17 +537,3 @@ Let us try simultaneously adding crate features, such that it learns to destroy 
 
     ---------> Results: 
         #### First training session: (stats/ts-2-4-1.csv)
-
-    -------
-
-    ################## Variant 2.4.2
-
-    We realized that at end_of_round() no Transition was being pushed, which is why it was immediately learning to drop a bomb even if 
-    it killed itself. It never realized it was.
-
-        ---------> Results: 
-        #### First training session: (stats/ts-2-4-2.csv)
-
-        The model learns reliably without killing itself after a while and without unlearning. After merely 100+ rounds it has
-        mastered searching for coins. However, the fact that it survies as long is so far only coincidental, since it's in the 
-        lookout for coins and accidentally escapes the bombs because it's going so fast.

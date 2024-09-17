@@ -187,4 +187,8 @@ def reward_from_events(events: List[str]):
         if event in game_rewards:
             reward_sum += game_rewards[event]
             
+<<<<<<< HEAD
     return reward_sum
+=======
+    return reward_sum
+>>>>>>> 68c07383ec892cb54902ea0460b1c551024d6660
