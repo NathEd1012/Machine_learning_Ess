@@ -247,21 +247,21 @@ In general: We want the agent to learn the following things at once:
 
     We begin with the following rewards:
 
-        e.INVALID_ACTION: -0.5,
-        e.MOVED_LEFT: 0.1,
-        e.MOVED_RIGHT: 0.1,
-        e.MOVED_UP: 0.1,
-        e.MOVED_DOWN: 0.1,
-        e.KILLED_SELF: -5,
-        e.BOMB_DROPPED: 0.3,
-        e.SURVIVED_ROUND: 5,
+        e.INVALID_ACTION: -0.1,
+        e.MOVED_LEFT: 0.02,
+        e.MOVED_RIGHT: 0.02,
+        e.MOVED_UP: 0.02,
+        e.MOVED_DOWN: 0.02,
+        e.KILLED_SELF: -10,
+        e.BOMB_DROPPED: 0.2,
+        e.SURVIVED_ROUND: 10,
         e.COIN_COLLECTED: 1,
-        e.CRATE_DESTROYED: 0.5,
+        #e.CRATE_DESTROYED: 0.5,
         # Custom events
-        e.COOL: 0.1,
-        e.WARM: - 0.2,
-        e.HOT: -0.3,
-        e.BOILING: -0.5,
+        e.COOL: 0.05,
+        e.WARM: - 0.1,
+        e.HOT: -0.2,
+        e.BOILING: -0.2,
         e.FRESHENED_UP: 0.2
 
     and the features we implemented are:
@@ -334,11 +334,152 @@ In general: We want the agent to learn the following things at once:
             return [-1] # No valid move
 
     ---------> Results: 
+    #### First training session: 2024-09-15 19:14:33, 2024-09-15 19:23:50, 2024-09-15 19:25:03, 2024-09-15 19:25:30 (stats/ts-2-3-1.csv)
+    Very quickly, the agent learns to collect coins and not kill itself.
 
+    However, the learning takes a wrong turn at some point and the COIN_COLLECTED graph
+    goes from _|^^^\_______ and similarly but contrary the KILLED_SELF graph. It appears 
+    as though at one point the agent decides on a different policy to immediately kill itself
+    before collecting any coins. We believe this is a matter of reward shaping, so we will continue
+    changing and monitoring the rewards.
 
+    The Loss graph grows exponentially.
+    
+    Even this behavior is not consistent. Training on the same features and rewards will yield
+    either this behavior or it will not catch on to the intended training at all.
 
+    #### Second training session: 2024-09-15 19:29:00, 2024-09-15 19:29:48, 2024-09-15 19:30:32,  (stats/ts-2-3-2.csv)
 
+    Before tweaking the rewards, let us try again with an adjusted learning_rate:
+    LEARNING_RATE = 0.0003 -> 0.0001
 
+    Nope, still similar behavior.
 
+    #### Third training session: (stats/ts-2-3-3.csv)
 
+    Let us try again with an adjusted learning_rate:
+    LEARNING_RATE = 0.0001 -> 0.001
 
+    Nope, still similar behavior. 3/4 didn't learn at all, and 1/4 (2-3-3-4) unlearned the behavior.
+
+    #### Fourth training session: (stats/ts-2-3-4.csv)
+
+    Let us try again with an adjusted learning_rate:
+    LEARNING_RATE = 1e-5
+
+    Nope, still similar behavior. 
+
+    #### Fifth training session: (stats/ts-2-3-5.csv)
+
+    Let us try again with an adjusted learning_rate:
+    LEARNING_RATE = 1e-6
+
+    Nope, still similar behavior. 
+
+    #### Sixth training session: (stats/ts-2-3-6.csv)
+
+    Let us try again with an adjusted capacity = 10000 for the ReplayBuffer. This would allow the agent to 
+    learn from a pool of events further in the past
+
+    Nope, still similar behavior. 
+
+    #### Seventh training session: (stats/ts-2-3-7.csv)
+
+    Let us try again with an adjusted capacity = 20000 for the ReplayBuffer. This would allow the agent to 
+    learn from a pool of events further in the past
+
+    Nope, still similar behavior. 
+
+    #### Eighth training session: (stats/ts-2-3-8.csv)
+
+    We reduced the batch_size = 64 -> 32 to reduce the noise in training.
+
+    With this approach, we achieved the most stable configuration so far (models/2-3-8-2) where the agent 
+    managed to keep the learned behaviors throughout the entire 2000 rounds. 
+
+    However, still inconsistent. Similar behavior as previous attempts.
+
+    #### Ninth training session: (stats/ts-2-3-9.csv)
+
+    Now, let us try to tweak the rewards. It's possible that the rewards are set too high
+    or inconsistently.
+
+    Let's try:
+
+        e.INVALID_ACTION: -0.1 -> -0.05,
+        e.MOVED_LEFT: 0.02,
+        e.MOVED_RIGHT: 0.02,
+        e.MOVED_UP: 0.02,
+        e.MOVED_DOWN: 0.02,
+        e.KILLED_SELF: -10 -> -5,
+        e.BOMB_DROPPED: 0.02 -> 0.05,
+        e.SURVIVED_ROUND: 10 -> 5,
+        e.COIN_COLLECTED: 1,
+        #e.CRATE_DESTROYED: 0.5,
+        # Custom events
+        e.COOL: 0.05,
+        e.WARM: -0.1 -> -0.05,
+        e.HOT: --0.2 -> 0.07,
+        e.BOILING: -0.2 -> -0.1,
+        e.FRESHENED_UP: 0.2 -> 0.1
+
+    Nope.
+
+    #### Tenth training session: (stats/ts-2-3-10.csv)
+
+    Now, let us try to tweak the rewards. It's possible that the rewards are set too high
+    or inconsistently.
+
+    Let's try:
+
+        e.INVALID_ACTION: -0.05,
+        e.MOVED_LEFT: 0.02,
+        e.MOVED_RIGHT: 0.02,
+        e.MOVED_UP: 0.02,
+        e.MOVED_DOWN: 0.02,
+        e.KILLED_SELF: -5,
+        e.BOMB_DROPPED: 0.05,
+        e.SURVIVED_ROUND: 5,
+        e.COIN_COLLECTED: 1,
+        #e.CRATE_DESTROYED: 0.5,
+        # Custom events
+        e.COOL: 0.05 -> 0.01,
+        e.WARM: -0.05 -> -0.02,
+        e.HOT: -0.07 -> -0.05,
+        e.BOILING:-0.1,
+        e.FRESHENED_UP: 0.1
+
+    Nope.
+
+    #### Eleventh training session: (stats/ts-2-3-11.csv)
+
+    Try a more aggressive gradient clipping:
+
+    # Gradient clipping
+    torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=0.5)
+
+    Nope.
+
+    #### Twelfth training session: (stats/ts-2-3-12.csv)
+
+    # callbacks.py
+    self.loss_fn = nn.SmoothL1Loss() # Huber Loss
+
+    The huber loss is supposed to be less sensitive to outliers.
+
+    Nope.
+
+    #### 13. training session: (stats/ts-2-3-13.csv)
+
+    We include in the code a snippet that will automatically save the best performing model:
+
+    in end_of_round():
+
+    # Save best performing model:
+    current_reward = self.stat_logger.total_reward
+    if current_reward > self.best_reward:
+        self.logger.info(f"New best reward: {current_reward}. Saving best-model.pt")
+        self.best_reward = current_reward
+        torch.save(self.model.state_dict(), "best-model.pt")
+
+    This will allow us to learn what we need to learn without worrying too much about unlearning.

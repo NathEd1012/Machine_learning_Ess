@@ -35,7 +35,7 @@ class ReplayBuffer:
 
 
 # Hyperparameters
-LEARNING_RATE = 0.0003
+LEARNING_RATE = 1e-6
 DISCOUNT_FACTOR = 0.6
 DECAY_RATE = 0.99
 TRANSITION_HISTORY_SIZE = 20
@@ -65,8 +65,11 @@ def setup_training(self):
     self.DISCOUNT_FACTOR = DISCOUNT_FACTOR
 
     # Initialize replay buffer
-    self.replay_buffer = ReplayBuffer(capacity = 5000)
-    self.batch_size = 64
+    self.replay_buffer = ReplayBuffer(capacity = 20000)
+    self.batch_size = 32
+
+    # Initialize best reward
+    self.best_reward = float('-inf')
 
 
     ## Logs
@@ -120,7 +123,7 @@ def train_dqn(self):
     loss.backward()
 
     # Gradient clipping
-    torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
+    torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=0.5)
 
     self.optimizer.step()
 
@@ -194,6 +197,15 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
     torch.save(self.model.state_dict(), "my-saved-model.pt")
     self.logger.info("Model saved to my-saved-model.pt")
 
+
+    # Save best performing model:
+    current_reward = self.stat_logger.total_reward
+    if current_reward > self.best_reward:
+        self.logger.info(f"New best reward: {current_reward}. Saving best-model.pt")
+        self.best_reward = current_reward
+        torch.save(self.model.state_dict(), "best-model.pt")
+
+
     # Set total_rounds if not already set (e.g., passed in from main.py)
     if self.total_rounds is None:
         self.total_rounds = self.round_counter  # Default to current round count if not set elsewhere
@@ -221,22 +233,22 @@ def reward_from_events(self, events: List[str]):
     Modify the rewards your agent gets to encourage certain behavior.
     """
     game_rewards = {
-        e.INVALID_ACTION: -0.5,
-        e.MOVED_LEFT: 0.1,
-        e.MOVED_RIGHT: 0.1,
-        e.MOVED_UP: 0.1,
-        e.MOVED_DOWN: 0.1,
+        e.INVALID_ACTION: -0.05,
+        e.MOVED_LEFT: 0.02,
+        e.MOVED_RIGHT: 0.02,
+        e.MOVED_UP: 0.02,
+        e.MOVED_DOWN: 0.02,
         e.KILLED_SELF: -5,
-        e.BOMB_DROPPED: 0.3,
+        e.BOMB_DROPPED: 0.05,
         e.SURVIVED_ROUND: 5,
         e.COIN_COLLECTED: 1,
-        e.CRATE_DESTROYED: 0.5,
+        #e.CRATE_DESTROYED: 0.5,
         # Custom events
-        e.COOL: 0.1,
-        e.WARM: - 0.2,
-        e.HOT: -0.3,
-        e.BOILING: -0.5,
-        e.FRESHENED_UP: 0.2
+        e.COOL: 0.01,
+        e.WARM: - 0.02,
+        e.HOT: -0.05,
+        e.BOILING: -0.1,
+        e.FRESHENED_UP: 0.1
     }
     reward_sum = 0
 

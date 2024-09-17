@@ -47,7 +47,7 @@ def setup(self):
 
     # Choose optimizer and loss function
     self.optimizer = optim.Adam(self.model.parameters(), lr = 0.001)
-    self.loss_fn = nn.MSELoss()
+    self.loss_fn = nn.SmoothL1Loss() # Huber Loss
 
     # Check if pre-trained model exists:
     if os.path.isfile("my-saved-model.pt"):
