@@ -234,15 +234,16 @@ def reward_from_events(self, events: List[str]):
     """
     game_rewards = {
         e.INVALID_ACTION: -0.05,
-        e.MOVED_LEFT: 0.02,
-        e.MOVED_RIGHT: 0.02,
-        e.MOVED_UP: 0.02,
-        e.MOVED_DOWN: 0.02,
+        e.MOVED_LEFT: 0.01,
+        e.MOVED_RIGHT: 0.01,
+        e.MOVED_UP: 0.01,
+        e.MOVED_DOWN: 0.01,
+        e.WAITED: -0.02,
         e.KILLED_SELF: -5,
-        e.BOMB_DROPPED: 0.05,
-        e.SURVIVED_ROUND: 5,
+        # e.BOMB_DROPPED: 0.05,
+        e.SURVIVED_ROUND: 4,
         e.COIN_COLLECTED: 1,
-        #e.CRATE_DESTROYED: 0.5,
+        e.CRATE_DESTROYED: 0.3,
         # Custom events
         e.COOL: 0.01,
         e.WARM: - 0.02,

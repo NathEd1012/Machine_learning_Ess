@@ -58,22 +58,12 @@ def state_to_features(game_state: dict) -> np.array:
     # Next move to target: crate
     next_move_crate_features = get_path_bfs_crates(game_state)
 
-    # How many bombs destroyed
-    how_many_crates_boom = calculate_crates_destroyed(game_state)
-    #print(how_many_crates_boom)
-
-    # Next safe tile
-    print(get_danger_map(game_state), "\n")
-
     features = np.concatenate([
             neighboring_tiles_features, # 4: up, right, down, left
             bomb_features, # 5: up, right, down, left, here
             next_move_coin_features, # 1: in which direction does the bfs say we should go for coin
-            next_move_crate_features, # 1: in which direction does the bfs say we should go for crate
-            how_many_crates_boom # 1: how many crates get destroyed by placing a bomb here?
+            #next_move_crate_features # 1: in which direction does the bfs say we should go for crate
         ])
-    
-    #print(features)
 
 
     return features
@@ -171,27 +161,13 @@ def get_danger_map(game_state):
 
         # Mark explosion radius (stop at walls)
         for i in range(1, 4):
-            if by - i >= 0:  # Up
-                if field[bx, by - i] == -1: # Break if tile = wall
-                    break
+            if by - i >= 0 and field[bx, by - i] >= 0:  # Up
                 danger_map[bx, by - i] = min(danger_map[bx, by - i], danger_score)
-
-        for i in range(1, 4):
-            if bx + i < cols:  # Right
-                if field[bx + i, by] == -1:
-                    break
+            if bx + i < cols and field[bx + i, by] >= 0:  # Right
                 danger_map[bx + i, by] = min(danger_map[bx + i, by], danger_score)
-
-        for i in range(1, 4):
-            if by + i < rows:  # Down
-                if field[bx, by + i] == -1:
-                    break
+            if by + i < rows and field[bx, by + i] >= 0:  # Down
                 danger_map[bx, by + i] = min(danger_map[bx, by + i], danger_score)
-
-        for i in range(1, 4):
-            if bx - i >= 0:  # Left
-                if field[bx - i, by] == -1:
-                    break
+            if bx - i >= 0 and field[bx - i, by] >= 0:  # Left
                 danger_map[bx - i, by] = min(danger_map[bx - i, by], danger_score)
 
     return danger_map
@@ -286,9 +262,7 @@ def get_path_bfs_crates(game_state):
         # Check if adjacent to crate:
         for crate_x, crate_y in crates:
             if abs(crate_x - x) + abs(crate_y - y) == 1: # Manhattan
-                if first_move is not None:
-                    #print(first_move)
-                    return [first_move]
+                return [first_move]
 
         # Explore neighboring tiles
         for i, (dx, dy) in enumerate(directions):
@@ -333,11 +307,12 @@ def calculate_crates_destroyed(game_state):
             new_x = agent_x + dx * step
             new_y = agent_y + dy * step
 
-            # Check if within bounds:
-            if new_x < 0 or new_y < 0 or new_x >= rows or new_y >= cols:
-                break
+            # If within bounds:
+            if new_x < 0 or new_y < 0 or new_x >= rows or new_y >= cols
+
             # Check what tile
             tile = field[new_x, new_y]
+
             # Break if wall:
             if tile == -1:
                 break
@@ -345,54 +320,5 @@ def calculate_crates_destroyed(game_state):
                 crates_destroyed +=1
                 break
 
-    return [crates_destroyed]
+    return crates_destroyed
 
-def get_path_bfs_safe_tile(game_state):
-    """
-    Using breadth-first-search, we want to determine the shortest path to our target.
-    Since there are walls and crates, this could make it complicated as a feature. 
-    For that reason, only return the next step: up, right, down, left
-    """
-    # dx, dy
-    directions = [(0, -1), (1, 0), (0, 1), (-1, 0)]
-    direction_names = [0, 1, 2, 3] # up, right, down, left
-
-    # Own position and field
-    field = game_state['field']
-    start_x, start_y = game_state['self'][3]
-
-    danger_map = get_danger_map(game_state)
-
-    rows, cols = field.shape
-    visited = set() # Keep track of tiles already visited
-
-    # BFS queue: stores (x, y, first_move) where first_move is initial direction
-    queue = deque([(start_x, start_y, None)])  
-    visited.add((start_x, start_y))  
-
-    # BFS to find shortest path to safe tile
-    while queue:
-        x, y, first_move = queue.popleft()
-
-        # Check if reached target
-        if (x, y) in targets:
-
-            if first_move is not None:
-                return [direction_names[first_move]]
-
-        # Explore neighboring tiles
-        for i, (dx, dy) in enumerate(directions):
-            new_x, new_y = x + dx, y + dy
-
-            # Check if new position within bounds and not visited
-            if 0 <= new_x < rows and 0 <= new_y < cols and (new_x, new_y) not in visited:
-                if field[new_x, new_y] == 0: # Free tile
-                    visited.add((new_x, new_y))
-                    # Enque new position, passing first move
-                    if first_move is None:
-                        queue.append((new_x, new_y, direction_names[i]))
-                    else:
-                        queue.append((new_x, new_y, first_move))
-
-    # Return if no path to target
-    return [-1] # No valid move
