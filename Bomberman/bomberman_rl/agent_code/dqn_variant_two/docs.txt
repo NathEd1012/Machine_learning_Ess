@@ -551,3 +551,4 @@ Let us try simultaneously adding crate features, such that it learns to destroy 
         The model learns reliably without killing itself after a while and without unlearning. After merely 100+ rounds it has
         mastered searching for coins. However, the fact that it survies as long is so far only coincidental, since it's in the 
         lookout for coins and accidentally escapes the bombs because it's going so fast.
+

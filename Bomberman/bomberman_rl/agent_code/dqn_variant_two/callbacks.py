@@ -10,7 +10,6 @@ import torch.optim as optim
 
 
 ACTIONS = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT', 'BOMB']
-ACTIONS_MINUS_BOMBS = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT']
 
 from .features import state_to_features, get_bomb_features, get_danger_map
 

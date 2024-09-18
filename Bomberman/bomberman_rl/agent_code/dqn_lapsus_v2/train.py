@@ -5,7 +5,7 @@ import pickle
 from typing import List
 import time
 import events as e
-from .features import state_to_features, get_bomb_features, get_danger_map
+from .features import state_to_features, get_bomb_features, get_danger_map, is_useless_bomb, calculate_crates_destroyed
 import numpy as np
 
 import sys
@@ -110,14 +110,7 @@ def train_dqn(self):
     self.logger.debug(f"Loss: {loss.item()}")
     self.stat_logger.update_loss(loss.item())
 
-
-def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_state: dict, events: List[str]):
-    """
-    Called once per step to allow intermediate rewards based on game events.
-    """
-    # 
-    old_state_features = state_to_features(old_game_state)
-    new_state_features = state_to_features(new_game_state)
+def custom_events(self, old_game_state, self_action, new_game_state, events):
 
     # Penalize if standing on bomb place
     own_position = new_game_state['self'][3]
@@ -141,6 +134,30 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
 
     if current_danger == 0 and  previous_danger < 0: # Think: values are negative, so pd < 0 bad.
         events.append("FRESHENED_UP")
+
+    # Penalized if dropped a stupid bomb
+    if self_action == "BOMB":
+        if is_useless_bomb(own_position, new_game_state):
+            events.append("USELESS_BOMB")
+
+        # Reward strategic bomb placement
+        crates_destroyed = calculate_crates_destroyed(new_game_state)[0]
+        crate_combo = 3 # Number of crates to count as a combo for additional points.
+        if crates_destroyed > crate_combo:
+            events.append("CRATE_COMBO")
+
+
+
+def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_state: dict, events: List[str]):
+    """
+    Called once per step to allow intermediate rewards based on game events.
+    """
+    # 
+    old_state_features = state_to_features(old_game_state)
+    new_state_features = state_to_features(new_game_state)
+
+    # Append custom_events
+    custom_events(self, old_game_state, self_action, new_game_state, events)
 
     # Calculate rewards and accumulate them
     reward = reward_from_events(self, events)
@@ -220,22 +237,25 @@ def reward_from_events(self, events: List[str]):
     """
     game_rewards = {
         e.INVALID_ACTION: -0.05,
-        e.MOVED_LEFT: 0.01,
-        e.MOVED_RIGHT: 0.01,
-        e.MOVED_UP: 0.01,
-        e.MOVED_DOWN: 0.01,
+        e.MOVED_LEFT: -0.01,
+        e.MOVED_RIGHT: -0.01,
+        e.MOVED_UP: -0.01,
+        e.MOVED_DOWN: -0.01,
         e.WAITED: -0.02,
         e.KILLED_SELF: -5,
-        # e.BOMB_DROPPED: 0.05,
-        e.SURVIVED_ROUND: 4,
+        e.BOMB_DROPPED: -0.05,
+        e.USELESS_BOMB: -0.2,
+        e.CRATE_COMBO: 0.5,
+        e.COIN_FOUND: 0.2,
+        e.SURVIVED_ROUND: 5,
         e.COIN_COLLECTED: 1,
         e.CRATE_DESTROYED: 0.3,
         # Custom events
-        e.COOL: 0.01,
-        e.WARM: - 0.02,
+        #e.COOL: 0.01,
+        e.WARM: - 0.05,
         e.HOT: -0.05,
-        e.BOILING: -0.1,
-        e.FRESHENED_UP: 0.1
+        e.BOILING: -0.05,
+        e.FRESHENED_UP: 0.05
     }
     reward_sum = 0
 

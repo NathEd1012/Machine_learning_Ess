@@ -396,3 +396,38 @@ def get_path_bfs_safe_tile(game_state):
 
     # Return if no safe path is found
     return [-1]  # No valid move found
+
+# Determine whether placing a bomb here is useless
+def is_useless_bomb(bomb_position, game_state):
+    field = game_state['field']
+    rows, cols = field.shape
+    bomb_x, bomb_y = bomb_position
+
+    blast_radius = 3
+
+    directions = [(0, -1), (1, 0), (0, 1), (-1, 0)]
+
+    # Check bomb's position for enemies
+    for enemy in game_state['others']:
+        if bomb_position == enemy[3]:
+            return [0]
+
+    for dx, dy in directions:
+        for i in range(1, blast_radius + 1):
+            new_x = bomb_x + dx * i
+            new_y = bomb_y + dy * i
+
+            if new_x < 0 or new_y < 0 or new_x >= rows or new_y >= cols:
+                break # out of bounds
+
+            if field[new_x, new_y] == -1:
+                break # Wall stops bomb
+
+            if field[new_x, new_y] == 1:
+                return [0] # Crate in blast range, not dumb
+
+            for enemy in game_state['others']:
+                if enemy[3] == (new_x, new_y):
+                    return [0] # Enemy in blast range
+    
+    return [1]
