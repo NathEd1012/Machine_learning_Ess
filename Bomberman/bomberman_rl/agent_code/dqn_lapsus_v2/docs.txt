@@ -197,6 +197,7 @@ In the first round, we want to train the agent to collect coins and then later t
 
     2.3.2:
 
-    Introduce epsilon greedy update that starts at 1 and ends at 0.025 after 5000 rounds.
+    Introduce epsilon greedy update that starts at 1 and ends at 0.025 after 5000 rounds. It appears to learn significantly worse with an epsilon policy
+    starting at 1.
 
 
