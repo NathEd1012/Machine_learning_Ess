@@ -250,6 +250,11 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
     if self.stat_logger.round_counter % self.stat_logger.log_frequency == 0:
         self.stat_logger.log_statistics()
 
+    # Update epsilon
+    self.model.train_count += 1
+    self.model.update_epsilon()
+    #print(self.model.epsilon)
+
 
 def reward_from_events(self, events: List[str]):
     """
@@ -257,10 +262,10 @@ def reward_from_events(self, events: List[str]):
     """
     game_rewards = {
         e.INVALID_ACTION: -0.1,
-        #e.MOVED_LEFT: -0.01,
-        #e.MOVED_RIGHT: -0.01,
-        #e.MOVED_UP: -0.01,
-        #e.MOVED_DOWN: -0.01,
+        e.MOVED_LEFT: -0.01,
+        e.MOVED_RIGHT: -0.01,
+        e.MOVED_UP: -0.01,
+        e.MOVED_DOWN: -0.01,
         e.WAITED: -0.02,
         e.KILLED_SELF: -5,
         e.BOMB_DROPPED: -0.1,

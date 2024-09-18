@@ -9,10 +9,11 @@ import random
 
 # Hyperparameters
 EPSILON = 0.1
-LEARNING_RATE = 0.0001
+LEARNING_RATE = 0.00001
 DISCOUNT_FACTOR = 0.95
-INITIAL_EPSILON = 1
-FINAL_EPSILON = 0.025
+INITIAL_EPSILON = 0.5
+FINAL_EPSILON = 0.01
+EPSILON_DECAY = 5000
 NUMBER_OF_FEATURES = 14
 NUMBER_OF_ACTIONS = 6
 
@@ -43,8 +44,12 @@ class DQN_Lapsus(nn.Module):
         self.optimizer = optim.Adam(self.parameters(), lr = LEARNING_RATE) 
 
         # Hyperparameters
-        self.epsilon = EPSILON
+        self.epsilon = INITIAL_EPSILON
         self.discount_factor = DISCOUNT_FACTOR
+        self.train_count = 0
+
+    def update_epsilon(self):
+        self.epsilon = FINAL_EPSILON + (INITIAL_EPSILON - FINAL_EPSILON) * np.exp(-1. * self.train_count / EPSILON_DECAY)
 
     def forward(self, x):
         x = torch.relu(self.fc1(x))
