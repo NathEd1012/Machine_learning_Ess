@@ -6,6 +6,8 @@ from collections import deque
 import importlib.util
 import os
 
+from termcolor import colored
+
 # Define feature parameters
 MAX_CRATES = 1
 MAX_ENEMIES = 1
@@ -65,6 +67,11 @@ def state_to_features(game_state: dict) -> np.array:
     # Next safe tile
     next_move_safe_tile_features = get_path_bfs_safe_tile(game_state)
 
+    # Can place bomb?
+    can_place_bomb_features = can_place_bomb(game_state)
+
+    #layout(game_state)
+
     
     features = np.concatenate([
             neighboring_tiles_features, # 4: up, right, down, left
@@ -72,7 +79,8 @@ def state_to_features(game_state: dict) -> np.array:
             next_move_coin_features, # 1: in which direction does the bfs say we should go for coin
             next_move_crate_features, # 1: in which direction does the bfs say we should go for crate
             how_many_crates_boom, # 1: how many crates get destroyed by placing a bomb here?
-            next_move_safe_tile_features # 1: which firsT_move towards safe_tile
+            next_move_safe_tile_features, # 1: which firsT_move towards safe_tile
+            can_place_bomb_features # 1: can I place a bomb?
     ])
     
     #print(features)
@@ -212,6 +220,7 @@ def get_path_bfs(game_state, target_types =['coin', 'crate', 'enemy']):
     # Own position and field
     field = game_state['field']
     start_x, start_y = game_state['self'][3]
+    danger_map = get_danger_map(game_state)
 
     rows, cols = field.shape
     visited = set() # Keep track of tiles already visited
@@ -224,10 +233,6 @@ def get_path_bfs(game_state, target_types =['coin', 'crate', 'enemy']):
     targets = []
     if 'coin' in target_types:
         targets.extend(game_state['coins'])
-    if 'crate' in target_types:
-        targets.extend((x, y) for x in range(rows) for y in range(cols) if field[x, y] == 1)
-    if 'enemy' in target_types:
-        targets.extend(enemy[3] for enemy in game_state['others'])
 
     # BFS to find shortest path
     while queue:
@@ -246,7 +251,7 @@ def get_path_bfs(game_state, target_types =['coin', 'crate', 'enemy']):
 
             # Check if new position within bounds and not visited
             if 0 <= new_x < rows and 0 <= new_y < cols and (new_x, new_y) not in visited:
-                if field[new_x, new_y] == 0: # Free tile
+                if field[new_x, new_y] == 0 and danger_map[new_x, new_y] == 0: # Free tile
                     visited.add((new_x, new_y))
                     # Enque new position, passing first move
                     if first_move is None:
@@ -270,6 +275,7 @@ def get_path_bfs_crates(game_state):
     # Own position and field
     field = game_state['field']
     start_x, start_y = game_state['self'][3]
+    danger_map = get_danger_map(game_state)
 
     rows, cols = field.shape
     visited = set() # Keep track of tiles already visited
@@ -289,7 +295,7 @@ def get_path_bfs_crates(game_state):
         for crate_x, crate_y in crates:
             if abs(crate_x - x) + abs(crate_y - y) == 1: # Manhattan
                 if first_move is not None:
-                    #print(first_move)
+                    #print(len(queue), queue, first_move)
                     return [first_move]
 
         # Explore neighboring tiles
@@ -298,7 +304,7 @@ def get_path_bfs_crates(game_state):
 
             # Check if new position within bounds and not visited
             if 0 <= new_x < rows and 0 <= new_y < cols and (new_x, new_y) not in visited:
-                if field[new_x, new_y] == 0: # Free tile
+                if field[new_x, new_y] == 0 and danger_map[new_x, new_y] == 0: # Free tile, no danger
                     visited.add((new_x, new_y))
                     # Enque new position, passing first move
                     if first_move is None:
@@ -307,6 +313,7 @@ def get_path_bfs_crates(game_state):
                         queue.append((new_x, new_y, first_move))
 
     # Return if no path to target
+    #print("No valid move")
     return [-1] # No valid move
 
 # Calculate how many crates we could destroy:
@@ -363,6 +370,7 @@ def get_path_bfs_safe_tile(game_state):
     field = game_state['field']
     start_x, start_y = game_state['self'][3]  # agent's current position
     danger_map = get_danger_map(game_state)  # get the map showing danger from bombs
+    #print(danger_map)
 
     rows, cols = field.shape
     visited = set()  # Keep track of tiles already visited
@@ -395,6 +403,7 @@ def get_path_bfs_safe_tile(game_state):
                         queue.append((new_x, new_y, first_move))
 
     # Return if no safe path is found
+    #print("No safe tile", visited)
     return [-1]  # No valid move found
 
 # Determine whether placing a bomb here is useless
@@ -431,3 +440,68 @@ def is_useless_bomb(bomb_position, game_state):
                     return [0] # Enemy in blast range
     
     return [1]
+
+# Determine if can place bomb or not:
+def can_place_bomb(game_state):
+    if game_state['self'][2]:
+        return [1]
+    else:
+        return [0]
+
+# Show the field layout
+def layout(game_state):
+    """
+    Display the game layout with colored output in the terminal and highlight agent positions.
+    """
+    # Extract field layout (walls, crates, free tiles)
+    field = game_state['field']  # 2D array (rows x cols)
+    rows, cols = field.shape
+
+    # Initialize the game matrix with the field
+    game_matrix = np.copy(field)
+
+    # Mark agent positions (highlight your agent and others)
+    agent_position = game_state['self'][3]
+    game_matrix[agent_position[0], agent_position[1]] = 8  # Mark your agent with '8'
+
+    # Mark other agents
+    for other_agent in game_state['others']:
+        other_agent_pos = other_agent[3]
+        game_matrix[other_agent_pos[0], other_agent_pos[1]] = 9  # Mark other agents with '9'
+
+    # Mark bombs
+    bombs = game_state['bombs']
+    for bomb_pos, bomb_timer in bombs:
+        game_matrix[bomb_pos[0], bomb_pos[1]] = -2  # Mark bomb positions with '-2'
+
+    # Mark explosions
+    explosion_map = game_state['explosion_map']
+    for x in range(rows):
+        for y in range(cols):
+            if explosion_map[x, y] > 0:
+                game_matrix[x, y] = 7  # Mark explosions with '7'
+
+    # Rotate the game matrix by 90 degrees to match the game layout
+    rotated_matrix = np.rot90(game_matrix)
+
+    # Define colors for different values in the game matrix
+    color_map = {
+        -1: 'red',      # Walls
+        1: 'yellow',    # Crates
+        0: 'white',     # Free tiles
+        8: 'green',     # Your agent (highlighted in bright green)
+        9: 'cyan',      # Other agents
+        -2: 'magenta',  # Bombs
+        7: 'red',       # Explosions
+    }
+
+    # Print the rotated matrix with colors
+    print("Rotated Game Layout:")
+    for row in rotated_matrix:
+        row_display = []
+        for cell in row:
+            color = color_map.get(cell, 'white')  # Get color for each cell, default to white
+            row_display.append(colored(f"{cell:2}", color))
+        print(" ".join(row_display))
+
+    return rotated_matrix

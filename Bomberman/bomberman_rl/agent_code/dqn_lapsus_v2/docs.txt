@@ -155,3 +155,39 @@ In the first round, we want to train the agent to collect coins and then later t
 
         events: CRATES_POTENTIALLY_DESTROYED
 
+        We do this to avoid the time delay of placing a bomb. The agent seems to perform significantly better, but still plateauing at around 20-25 crates.
+
+        Other notable things: At first more steps = good, then it reduces them despite having included a reward for step survived.
+
+        ts-2-2-6.csv, 2-2-6.pt
+
+################## Variant 2.2.4
+
+        We include in the path finding algorithm a clause so that it only returns the next move if it's not currently blocked by an 
+        imminent explosion. No noticeable improvement wrt to 2.2.3. 
+
+        Let us change the training scenario to mostly-empty with
+
+            "mostly-empty": {
+                "CRATE_DENSITY": 0.15,
+                "COIN_COUNT": 9
+            }
+
+        This should allow it to explode enough crates to survive until the end of the round. We train it for 10000 iterations here. These are
+        still too many crates and it doesn't yet manage to survive the entire round. 
+
+        In the next step, we will use scenario:
+
+            "almost-empty": {
+                "CRATE_DENSITY": 0.05,
+                "COIN_COUNT": 4
+            }
+
+        to ensure that it gets that sweet reward of surviving a round.
+
+        Sometimes the agent gets confused and doesn't know what to do, particularly when there is more than one target simultaneously.
+
+
+        Now that it's training (1000 times) on almost empty, it appears to be surviving more frequently (0.5). 
+
+

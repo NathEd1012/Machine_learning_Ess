@@ -16,6 +16,7 @@ class TrainingLogger:
         self.total_score = 0
         self.total_reward = 0
         self.cumulative_loss = 0
+        self.total_steps = 0
         self.event_count = {event: 0 for event in self.event_names}
         self.action_count = {action: 0 for action in self.action_names}
 

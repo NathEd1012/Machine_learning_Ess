@@ -138,16 +138,18 @@ def custom_events(self, old_game_state, self_action, new_game_state, events):
     if current_danger == 0 and  previous_danger < 0: # Think: values are negative, so pd < 0 bad.
         events.append("FRESHENED_UP")
 
-    # Penalized if dropped a stupid bomb
-    if self_action == "BOMB":
+    # Penalized if dropped a stupid bomb, to actually drop g_s['self'][2] must be True
+    if self_action == "BOMB" and old_game_state['self'][2] == True:
         if is_useless_bomb(own_position, new_game_state)[0]:
             events.append("USELESS_BOMB")
 
         # Reward strategic bomb placement
         crates_destroyed = calculate_crates_destroyed(new_game_state)[0]
         if crates_destroyed > 0:
-            for 
-            events.append()
+            for _ in range(crates_destroyed):
+                events.append("CRATE_POTENTIALLY_DESTROYED")
+
+            #print("cd", crates_destroyed)
 
 
         crate_combo = 3 # Number of crates to count as a combo for additional points.
@@ -254,7 +256,7 @@ def reward_from_events(self, events: List[str]):
     Modify the rewards your agent gets to encourage certain behavior.
     """
     game_rewards = {
-        e.INVALID_ACTION: -0.05,
+        e.INVALID_ACTION: -0.1,
         e.MOVED_LEFT: -0.01,
         e.MOVED_RIGHT: -0.01,
         e.MOVED_UP: -0.01,
@@ -267,6 +269,7 @@ def reward_from_events(self, events: List[str]):
         e.COIN_FOUND: 0.4,
         e.SURVIVED_ROUND: 5,
         e.COIN_COLLECTED: 1,
+        e.CRATE_POTENTIALLY_DESTROYED: 0.5,
         #e.CRATE_DESTROYED: 0.5,
         # Custom events
         #e.COOL: 0.01,

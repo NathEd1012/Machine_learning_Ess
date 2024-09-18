@@ -112,6 +112,9 @@ def train_dqn(self):
 
 def custom_events(self, old_game_state, self_action, new_game_state, events):
 
+    if new_game_state is None:
+        return
+
     # Penalize if standing on bomb place
     own_position = new_game_state['self'][3]
     bomb_danger_here = get_bomb_features(own_position, new_game_state)[4]
@@ -135,17 +138,28 @@ def custom_events(self, old_game_state, self_action, new_game_state, events):
     if current_danger == 0 and  previous_danger < 0: # Think: values are negative, so pd < 0 bad.
         events.append("FRESHENED_UP")
 
-    # Penalized if dropped a stupid bomb
-    if self_action == "BOMB":
+    # Penalized if dropped a stupid bomb, to actually drop g_s['self'][2] must be True
+    if self_action == "BOMB" and old_game_state['self'][2] == True:
         if is_useless_bomb(own_position, new_game_state)[0]:
             events.append("USELESS_BOMB")
 
         # Reward strategic bomb placement
         crates_destroyed = calculate_crates_destroyed(new_game_state)[0]
+        if crates_destroyed > 0:
+            for _ in range(crates_destroyed):
+                events.append("CRATE_POTENTIALLY_DESTROYED")
+
+            #print("cd", crates_destroyed)
+
+
         crate_combo = 3 # Number of crates to count as a combo for additional points.
         if crates_destroyed > crate_combo:
             events.append("CRATE_COMBO")
 
+    # Maybe give rewards for STEP_SURVIVED?
+    events.append("STEP_SURVIVED")
+
+    # Give rewards not for CRATE_DESTROYED, but for CRATE_POTENTIALLY_DESTROYED
 
 
 def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_state: dict, events: List[str]):
@@ -191,6 +205,9 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
     steps = last_game_state['step']
     self.stat_logger.round_counter += 1
 
+    # Append custom_events
+    custom_events(self, last_game_state, last_action, None, events)
+
     # Save model after every round
     torch.save(self.model.state_dict(), "my-saved-model.pt")
     self.logger.info("Model saved to my-saved-model.pt")
@@ -227,7 +244,7 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
     self.stat_logger.update_score(last_game_state["self"][1])
     self.stat_logger.update_reward(reward)
     self.stat_logger.update_steps(steps)
-    print(steps)
+    #print(steps)
 
 
     if self.stat_logger.round_counter % self.stat_logger.log_frequency == 0:
@@ -239,26 +256,28 @@ def reward_from_events(self, events: List[str]):
     Modify the rewards your agent gets to encourage certain behavior.
     """
     game_rewards = {
-        e.INVALID_ACTION: -0.05,
-        e.MOVED_LEFT: -0.01,
-        e.MOVED_RIGHT: -0.01,
-        e.MOVED_UP: -0.01,
-        e.MOVED_DOWN: -0.01,
+        e.INVALID_ACTION: -0.1,
+        #e.MOVED_LEFT: -0.01,
+        #e.MOVED_RIGHT: -0.01,
+        #e.MOVED_UP: -0.01,
+        #e.MOVED_DOWN: -0.01,
         e.WAITED: -0.02,
         e.KILLED_SELF: -5,
-        e.BOMB_DROPPED: -0.05,
+        e.BOMB_DROPPED: -0.1,
         e.USELESS_BOMB: -0.2,
-        e.CRATE_COMBO: 0.5,
-        e.COIN_FOUND: 0.2,
+        e.CRATE_COMBO: 1,
+        e.COIN_FOUND: 0.4,
         e.SURVIVED_ROUND: 5,
         e.COIN_COLLECTED: 1,
-        e.CRATE_DESTROYED: 0.3,
+        e.CRATE_POTENTIALLY_DESTROYED: 0.5,
+        #e.CRATE_DESTROYED: 0.5,
         # Custom events
         #e.COOL: 0.01,
         e.WARM: - 0.05,
         e.HOT: -0.05,
         e.BOILING: -0.05,
-        e.FRESHENED_UP: 0.05
+        e.FRESHENED_UP: 0.05,
+        e.STEP_SURVIVED: 0.01
     }
     reward_sum = 0
 

@@ -27,8 +27,12 @@ SCENARIOS = {
         "COIN_COUNT": 9
     },
     "mostly-empty": {
-        "CRATE_DENSITY": 0.2,
-        "COIN_COUNT": 0
+        "CRATE_DENSITY": 0.15,
+        "COIN_COUNT": 9
+    },
+    "almost-empty": {
+        "CRATE_DENSITY": 0.05,
+        "COIN_COUNT": 4
     },
     "coin-slightly-less-heaven": {
         "CRATE_DENSITY": 0,
