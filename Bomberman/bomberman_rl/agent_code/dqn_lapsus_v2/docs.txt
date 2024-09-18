@@ -139,8 +139,19 @@ In the first round, we want to train the agent to collect coins and then later t
             e.BOILING: -0.05,
             e.FRESHENED_UP: 0.05
 
-        We as well increased the rewards for destroying crates and achieving a crate_combo
+        We as well increased the rewards for destroying crates and achieving a crate_combo is still a difficult task that it hasn't learned.
+        It does learn not to place stupid bombs, but at a certain point it doesn't break any crates, it stabilizes at around 12-15. 
 
+        We try first increasing the batch_size = 32 -> 64. This did not help the case. 
 
+    ################## Variant 2.2.3    
 
+        Weird stuff, weird stuff. The agent learns to walk less, the Steps stat showing a decrease, while simultaneously breaking as many crates.
+        This can be explained possibly by the rewards, which penalize walking. However, this would mean a conscious decision of the agent to kill itself.
+
+        Let us try with some new features and events:
+
+        feature: can_place_bomb ? 
+
+        events: CRATES_POTENTIALLY_DESTROYED
 

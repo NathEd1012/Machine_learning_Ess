@@ -9,16 +9,16 @@ import random
 
 # Hyperparameters
 EPSILON = 0.1
-LEARNING_RATE = 0.001
+LEARNING_RATE = 0.0001
 DISCOUNT_FACTOR = 0.95
 INITIAL_EPSILON = 1
 FINAL_EPSILON = 0.025
-NUMBER_OF_FEATURES = 13
+NUMBER_OF_FEATURES = 14
 NUMBER_OF_ACTIONS = 6
 
 # ReplayMemory
 CAPACITY = 20000
-BATCH_SIZE = 32
+BATCH_SIZE = 64
 
 class DQN_Lapsus(nn.Module):
     def __init__(self, 

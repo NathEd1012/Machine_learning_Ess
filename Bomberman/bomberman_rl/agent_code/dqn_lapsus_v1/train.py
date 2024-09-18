@@ -137,7 +137,7 @@ def custom_events(self, old_game_state, self_action, new_game_state, events):
 
     # Penalized if dropped a stupid bomb
     if self_action == "BOMB":
-        if is_useless_bomb(own_position, new_game_state):
+        if is_useless_bomb(own_position, new_game_state)[0]:
             events.append("USELESS_BOMB")
 
         # Reward strategic bomb placement
@@ -188,6 +188,7 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
     This is also a good place to store an agent that you updated.
     """
     # Increment round counter
+    steps = last_game_state['step']
     self.stat_logger.round_counter += 1
 
     # Save model after every round
@@ -225,6 +226,8 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
     self.stat_logger.update_action_count(last_action)
     self.stat_logger.update_score(last_game_state["self"][1])
     self.stat_logger.update_reward(reward)
+    self.stat_logger.update_steps(steps)
+    print(steps)
 
 
     if self.stat_logger.round_counter % self.stat_logger.log_frequency == 0:

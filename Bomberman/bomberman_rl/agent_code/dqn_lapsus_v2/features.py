@@ -65,6 +65,9 @@ def state_to_features(game_state: dict) -> np.array:
     # Next safe tile
     next_move_safe_tile_features = get_path_bfs_safe_tile(game_state)
 
+    # Can place bomb?
+    can_place_bomb_features = can_place_bomb(game_state)
+
     
     features = np.concatenate([
             neighboring_tiles_features, # 4: up, right, down, left
@@ -72,7 +75,8 @@ def state_to_features(game_state: dict) -> np.array:
             next_move_coin_features, # 1: in which direction does the bfs say we should go for coin
             next_move_crate_features, # 1: in which direction does the bfs say we should go for crate
             how_many_crates_boom, # 1: how many crates get destroyed by placing a bomb here?
-            next_move_safe_tile_features # 1: which firsT_move towards safe_tile
+            next_move_safe_tile_features, # 1: which firsT_move towards safe_tile
+            can_place_bomb_features # 1: can I place a bomb?
     ])
     
     #print(features)
@@ -395,6 +399,7 @@ def get_path_bfs_safe_tile(game_state):
                         queue.append((new_x, new_y, first_move))
 
     # Return if no safe path is found
+    print("No safe tile", visited)
     return [-1]  # No valid move found
 
 # Determine whether placing a bomb here is useless
@@ -431,3 +436,10 @@ def is_useless_bomb(bomb_position, game_state):
                     return [0] # Enemy in blast range
     
     return [1]
+
+# Determine if can place bomb or not:
+def can_place_bomb(game_state):
+    if game_state['self'][2]:
+        return [1]
+    else:
+        return [0]

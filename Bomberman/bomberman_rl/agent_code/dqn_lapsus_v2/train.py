@@ -112,6 +112,9 @@ def train_dqn(self):
 
 def custom_events(self, old_game_state, self_action, new_game_state, events):
 
+    if new_game_state is None:
+        return
+
     # Penalize if standing on bomb place
     own_position = new_game_state['self'][3]
     bomb_danger_here = get_bomb_features(own_position, new_game_state)[4]
@@ -142,10 +145,19 @@ def custom_events(self, old_game_state, self_action, new_game_state, events):
 
         # Reward strategic bomb placement
         crates_destroyed = calculate_crates_destroyed(new_game_state)[0]
+        if crates_destroyed > 0:
+            for 
+            events.append()
+
+
         crate_combo = 3 # Number of crates to count as a combo for additional points.
         if crates_destroyed > crate_combo:
             events.append("CRATE_COMBO")
 
+    # Maybe give rewards for STEP_SURVIVED?
+    events.append("STEP_SURVIVED")
+
+    # Give rewards not for CRATE_DESTROYED, but for CRATE_POTENTIALLY_DESTROYED
 
 
 def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_state: dict, events: List[str]):
@@ -188,7 +200,11 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
     This is also a good place to store an agent that you updated.
     """
     # Increment round counter
+    steps = last_game_state['step']
     self.stat_logger.round_counter += 1
+
+    # Append custom_events
+    custom_events(self, last_game_state, last_action, None, events)
 
     # Save model after every round
     torch.save(self.model.state_dict(), "my-saved-model.pt")
@@ -225,6 +241,8 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
     self.stat_logger.update_action_count(last_action)
     self.stat_logger.update_score(last_game_state["self"][1])
     self.stat_logger.update_reward(reward)
+    self.stat_logger.update_steps(steps)
+    #print(steps)
 
 
     if self.stat_logger.round_counter % self.stat_logger.log_frequency == 0:
@@ -249,13 +267,14 @@ def reward_from_events(self, events: List[str]):
         e.COIN_FOUND: 0.4,
         e.SURVIVED_ROUND: 5,
         e.COIN_COLLECTED: 1,
-        e.CRATE_DESTROYED: 0.5,
+        #e.CRATE_DESTROYED: 0.5,
         # Custom events
         #e.COOL: 0.01,
         e.WARM: - 0.05,
         e.HOT: -0.05,
         e.BOILING: -0.05,
-        e.FRESHENED_UP: 0.05
+        e.FRESHENED_UP: 0.05,
+        e.STEP_SURVIVED: 0.01
     }
     reward_sum = 0
 
