@@ -46,9 +46,5 @@ def act(self, game_state):
     else:
         # if not in training always return best action
         #self.logger.info(f'Best action:{ACTIONS[best_action]}')
-<<<<<<< HEAD
         return ACTIONS[best_action]
 
-=======
-        return ACTIONS[best_action]
->>>>>>> 68c07383ec892cb54902ea0460b1c551024d6660

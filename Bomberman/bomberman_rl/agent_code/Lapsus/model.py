@@ -40,8 +40,4 @@ class Lapsus(nn.Module):
         self.synchronization_rate = synchronization_rate
         self.saving_rate = saving_rate
 
-<<<<<<< HEAD
     
-=======
-    
->>>>>>> 68c07383ec892cb54902ea0460b1c551024d6660
