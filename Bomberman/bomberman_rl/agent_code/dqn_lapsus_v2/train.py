@@ -137,7 +137,7 @@ def custom_events(self, old_game_state, self_action, new_game_state, events):
 
     # Penalized if dropped a stupid bomb
     if self_action == "BOMB":
-        if is_useless_bomb(own_position, new_game_state):
+        if is_useless_bomb(own_position, new_game_state)[0]:
             events.append("USELESS_BOMB")
 
         # Reward strategic bomb placement
@@ -243,13 +243,13 @@ def reward_from_events(self, events: List[str]):
         e.MOVED_DOWN: -0.01,
         e.WAITED: -0.02,
         e.KILLED_SELF: -5,
-        e.BOMB_DROPPED: -0.05,
+        e.BOMB_DROPPED: -0.1,
         e.USELESS_BOMB: -0.2,
-        e.CRATE_COMBO: 0.5,
-        e.COIN_FOUND: 0.2,
+        e.CRATE_COMBO: 1,
+        e.COIN_FOUND: 0.4,
         e.SURVIVED_ROUND: 5,
         e.COIN_COLLECTED: 1,
-        e.CRATE_DESTROYED: 0.3,
+        e.CRATE_DESTROYED: 0.5,
         # Custom events
         #e.COOL: 0.01,
         e.WARM: - 0.05,

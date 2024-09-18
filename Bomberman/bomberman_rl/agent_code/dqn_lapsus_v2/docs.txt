@@ -65,7 +65,7 @@ In the first round, we want to train the agent to collect coins and then later t
                 "COIN_COUNT": 9
             }
 
-        #### Second training session: (stats/ts-2-2-1.csv)
+        #### Second training session: (stats/-----)
 
         With the new rewards:
 
@@ -94,11 +94,52 @@ In the first round, we want to train the agent to collect coins and then later t
         We also don't want it to place bombs stupidly, so we penalize bomb_placement in general, particularly useless bombs and also reward an extra
         0.5 points for breaking many (3+) bombs at once.
 
-
-
         The coin-collecting agent is saved in coin-heaven-1-1-1.pt and we move on with training. We will from here on perform different approaches to training:
         First, we will directly train the agent with the next scenario: loot-crate. In dqn_lapsus_v2, we will train the agent from scratch but already in an
         environment with sufficient crates.
+
+        Within the first 1000 training games, the agent is learning to break crates and avoid bombs, mostly. It shows a steady increase in average 
+        crates destroyed to approximately 12 every game. Behaviors such as not dropping useless bombs or making crate combos have not been internalized yet.
+        The amount of useless bombs is nearly 100% so far, being almost identically distributed to the action "BOMB". Let us train it now for 10000 games and see
+        if brute force alone is enough to make it learn something useful.
+
+        A bug in our code reveals, that every bomb is a useless bomb because the statement 0: False, not useless; 1: True, useless, is hidden in a list
+        which means that it always returns True.
+
+        #### Third training session: (stats/ts-2-2-1.csv)
+
+        With the bug fixed, we let the agent train again. This time we train it on scenario loot-crate, such that it's more evident why there is supposed 
+        to be a reward for breaking bombs. Now that this is fixed, the agent learns to drop drastically less useless bombs. More complicated events such as 
+        crate combo are still rare and haven't been learned. However, in the playthrough at merely 1700 training games, the agent shows an understanding for
+        avoiding bombs and delaying the pursuit of coins (most times) until it is safe to do so. 
+
+        However, the agent seems to stop after destroying around 10-15 crates and it plateaus. Another behavior that we can see is that it over-prioritizes 
+        bomb dropping, to an extent where it won't pursue a coin before dropping a bomb. Let us try by penalizing bomb dropping a little further.
+
+    ################## Variant 2.2.2
+
+            e.INVALID_ACTION: -0.05,
+            e.MOVED_LEFT: -0.01,
+            e.MOVED_RIGHT: -0.01,
+            e.MOVED_UP: -0.01,
+            e.MOVED_DOWN: -0.01,
+            e.WAITED: -0.02,
+            e.KILLED_SELF: -5,
+            e.BOMB_DROPPED: -0.1,
+            e.USELESS_BOMB: -0.2,
+            e.CRATE_COMBO: 1,
+            e.COIN_FOUND: 0.4,
+            e.SURVIVED_ROUND: 5,
+            e.COIN_COLLECTED: 1,
+            e.CRATE_DESTROYED: 0.5,
+            # Custom events
+            #e.COOL: 0.01,
+            e.WARM: - 0.05,
+            e.HOT: -0.05,
+            e.BOILING: -0.05,
+            e.FRESHENED_UP: 0.05
+
+        We as well increased the rewards for destroying crates and achieving a crate_combo
 
 
 
