@@ -169,7 +169,7 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
     # 
     old_state_features = state_to_features(old_game_state)
     new_state_features = state_to_features(new_game_state)
-
+    print(old_game_state["explosion_map"])
     # Append custom_events
     custom_events(self, old_game_state, self_action, new_game_state, events)
 
@@ -204,6 +204,7 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
     # Increment round counter
     steps = last_game_state['step']
     self.stat_logger.round_counter += 1
+    print(last_game_state["explosion_map"])
 
     # Append custom_events
     custom_events(self, last_game_state, last_action, None, events)
