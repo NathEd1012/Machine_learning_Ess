@@ -10,7 +10,7 @@ import time
 import sys
 import argparse
 
-from .callbacks import state_to_features, ACTIONS
+from .callbacks import state_to_features, calculate_crates_destroyed, ACTIONS
 
 LEARNING_RATE = 0.2
 DISCOUNT_FACTOR = 0.99
@@ -58,6 +58,13 @@ def setup_training(self):
             writer.writerow(headers)
             
 
+def custom_rewards(self, old_game_state, self_action, new_game_state, events):
+    if self_action == "BOMB" and old_game_state['self'][2] == True:
+        # Reward strategic bomb placement
+        crates_destroyed = calculate_crates_destroyed(new_game_state)[0]
+        if crates_destroyed > 0:
+            for _ in range(crates_destroyed):
+                events.append("CRATE_POT_DESTROYED")
 
 def game_events_occurred(self, old_game_state, self_action, new_game_state, events):
     """
@@ -78,6 +85,7 @@ def game_events_occurred(self, old_game_state, self_action, new_game_state, even
     """
     self.logger.debug(f'Encountered game event(s) {", ".join(map(repr, events))} in step {new_game_state["step"]}')
     
+    custom_rewards(self, old_game_state, self_action, new_game_state, events)
     # Track statistics
     # Ensure total_score and total_reward are initialized
     if not hasattr(self, 'total_score'):
@@ -234,7 +242,8 @@ def reward_from_events(self, events) -> int:
         #e.BOMB_DROPPED: 0.05,
         e.SURVIVED_ROUND: 1, #4
         e.COIN_COLLECTED: 1,
-        e.CRATE_DESTROYED: 2,
+        e.CRATE_POT_DESTROYED: 2,
+        e.CLOSING_IN: 0.02
     }
     '''
         # Custom events

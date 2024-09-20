@@ -79,7 +79,7 @@ def act(self, game_state: dict) -> str:
         self.q_table[features] = np.zeros(len(ACTIONS))
     
     act = ACTIONS[np.argmax(self.q_table[features])]
-    print(act)
+    #print(act)
     return act 
 
 def state_to_features(game_state: dict) -> tuple:
@@ -200,8 +200,7 @@ def state_to_features(game_state: dict) -> tuple:
 
     
     #print("... ^; >; u; <; ..D; next; crates; fight x3")
-    print(features)
-
+    #print(feature)
 
     return tuple(features)
 
@@ -302,7 +301,7 @@ def get_path_bfs(game_state, target_types =['coin', 'crate']):
         distance += 1
         # Check if reached target
         if (x, y) in targets:
-
+            
             if first_move is not None:
                 if distance == 1 and 'crate' in target_types:
                     #print(distance)
