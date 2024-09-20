@@ -63,7 +63,7 @@ def state_to_features(game_state: dict) -> np.array:
     #print(how_many_crates_boom)
 
     # Next safe tile
-    print(get_danger_map(game_state), "\n")
+    #print(get_danger_map(game_state), "\n")
 
     features = np.concatenate([
             neighboring_tiles_features, # 4: up, right, down, left

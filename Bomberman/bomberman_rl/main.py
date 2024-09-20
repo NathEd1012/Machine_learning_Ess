@@ -33,14 +33,14 @@ def world_controller(world, n_rounds, *,
                      gui, every_step, turn_based, make_video, update_interval):
     if make_video and not gui.screenshot_dir.exists():
         gui.screenshot_dir.mkdir()
-
+    
     gui_timekeeper = Timekeeper(update_interval)
 
     def render(wait_until_due):
         # If every step should be displayed, wait until it is due to be shown
         if wait_until_due:
             gui_timekeeper.wait()
-
+        #print("2")
         if gui_timekeeper.is_due():
             gui_timekeeper.note()
             # Render (which takes time)
@@ -53,6 +53,7 @@ def world_controller(world, n_rounds, *,
         while world.running:
             # Only render when the last frame is not too old
             if gui is not None:
+                #print("1")
                 render(every_step)
 
                 # Check GUI events

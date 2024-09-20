@@ -5,7 +5,7 @@ import random
 import numpy as np
 
 
-ACTIONS = ['UP', 'RIGHT', 'DOWN', 'LEFT']
+ACTIONS = ['UP', 'RIGHT', 'DOWN', 'LEFT'] #, 'WAIT', 'BOMB']
 EPSILON = 0.10
 
 def setup(self):
@@ -40,6 +40,7 @@ def setup(self):
         except EOFError:
             self.logger.error("Error: Q-table file is empty or corrupted")
             self.q_table = {}
+    print("Q_Table_Length", len(self.q_table))  # Prints the number of entries in the Q-table
 '''     
     # Q-table
     if self.train and not os.path.isfile("q_table.pkl"):
@@ -50,6 +51,7 @@ def setup(self):
         with open("q_table.pkl", "rb") as file:
             self.q_table = pickle.load(file)
 '''
+    
 
 def act(self, game_state: dict) -> str:
     """
