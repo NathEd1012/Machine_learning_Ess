@@ -248,7 +248,7 @@ def state_to_features(self, game_state: dict) -> torch.tensor:
     # Counter for the step arrays
     number_of_found_crate_positions = np.zeros(4)
     number_of_found_dead_ends = np.zeros(4)
-    number_of_found_coins = np.zeros(4)
+    number_of_found_coins = np.zeros(50)
     number_of_found_opponents = np.zeros(4)
 
     # condition to quit the search early

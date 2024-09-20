@@ -27,6 +27,26 @@ def setup(self):
     self.round_counter = 0
     self.n_rounds = getattr(self, 'n_rounds', None)
 
+
+
+    q_table_path = os.path.join(os.path.dirname(__file__), 'q_table.pkl')
+
+    if self.train and not os.path.isfile(q_table_path):
+        self.logger.info("Setting up Q-table from scratch")
+        self.q_table = {}  # Initialize an empty Q-table
+        # Save the empty Q-table to the file to avoid this issue in the future
+        with open(q_table_path, 'wb') as file:
+            pickle.dump(self.q_table, file)
+    else:
+        self.logger.info("Loading Q-table from saved features.")
+        try:
+            with open(q_table_path, "rb") as file:
+                self.q_table = pickle.load(file)
+        except EOFError:
+            self.logger.error("Error: Q-table file is empty or corrupted")
+            self.q_table = {}
+
+'''     
     # Q-table
     if self.train and not os.path.isfile("q_table.pkl"):
         self.logger.info("Setting up Q-table from scratch")
@@ -35,8 +55,7 @@ def setup(self):
         self.logger.info("Loading Q-table from saved features.")
         with open("q_table.pkl", "rb") as file:
             self.q_table = pickle.load(file)
-
-
+'''
 def act(self, game_state: dict) -> str:
     """
     Your agent should parse the input, think, and take a decision.
