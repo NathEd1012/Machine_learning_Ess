@@ -377,3 +377,13 @@ In the first round, we want to train the agent to collect coins and then later t
     ----- v2_6
 
     Here, let us remove the distance feature. It can be a bit confusing perhaps
+
+
+    ----- v2_7
+
+    We train v2_7 with a single peaceful_agent in an almost-empty crate scenario. In the initial 500 round training session
+    the agent appears to learn that it's benefitial to survive longer and slowly picks up on destroying crates. During the next session 
+    (10000 rounds), it manages to also learn to survive ~40%, to not place useless bombs and to survive for longer periods of time.
+
+    However, it is still struggling to learn useful strategies to corner enemies, to track them, and to strategically place bombs. 
+    Possibly, we need to include more robust features for this to work. Let us try on v2_8

@@ -1,11 +1,17 @@
-from collections import namedtuple
+import csv
+import os
+from collections import namedtuple, deque, defaultdict
+import pickle
 from typing import List
+import time
 import events as e
 from .features import state_to_features, get_bomb_features, get_danger_map, is_useless_bomb, calculate_crates_destroyed, calculate_enemies_in_blast_radius
 import numpy as np
 
 import sys
 import argparse
+
+import random
 
 import torch
 
@@ -104,10 +110,9 @@ def train_dqn(self):
     self.logger.debug(f"Loss: {loss.item()}")
     self.stat_logger.update_loss(loss.item())
 
-def custom_events(old_game_state, self_action, new_game_state, events):
+def custom_events(self, old_game_state, self_action, new_game_state, events):
 
     if new_game_state is None:
-        
         return
 
     # Penalize if standing on bomb place
@@ -158,8 +163,39 @@ def custom_events(old_game_state, self_action, new_game_state, events):
             for _ in range(enemies_in_blast_radius):
                 events.append("ENEMY_POTENTIALLY_KILLED")
 
-    
+    # Reward if we're last survivor
+    old_enemies = len(old_game_state['others'])
+    new_enemies = len(old_game_state['others'])
+    if old_enemies == 1 and new_enemies == 0:
+        events.append("LAST_AGENT_STANDING")
 
+    # Event for moving towards enemy
+    def manhattan_distance(pos_1, pos_2):
+        return abs(pos_1[0] - pos_2[0]) + abs(pos_1[1] - pos_2[1])
+    
+    def nearest_enemy(game_state):
+        agent_x, agent_y = game_state['self'][3]
+        enemies = [enemy[3] for enemy in game_state['others']]
+
+        if not enemies:
+            return None
+        
+        nearest_enemy = min(enemies, key = lambda pos: abs(pos[0] - agent_x) + abs(pos[1] - agent_y))
+
+        return nearest_enemy
+    
+    nearest_enemy_old = nearest_enemy(old_game_state)
+    nearest_enemy_new = nearest_enemy(new_game_state)
+
+    if nearest_enemy_old and nearest_enemy_new:
+        old_distance = manhattan_distance(previous_pos, nearest_enemy_old)
+        new_distance = manhattan_distance(current_pos, nearest_enemy_new)
+
+        if new_distance < old_distance:
+            events.append("CLOSER_TO_ENEMY")
+        elif new_distance > old_distance:
+            events.append("FURTHER_FROM_ENEMY")
+        
 
 def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_state: dict, events: List[str]):
     """
@@ -170,7 +206,7 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
     new_state_features = state_to_features(new_game_state)
 
     # Append custom_events
-    custom_events(old_game_state, self_action, new_game_state, events)
+    custom_events(self, old_game_state, self_action, new_game_state, events)
 
     # Calculate rewards and accumulate them
     reward = reward_from_events(self, events)
@@ -205,7 +241,7 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
     self.stat_logger.round_counter += 1
 
     # Append custom_events
-    custom_events(last_game_state, last_action, None, events)
+    custom_events(self, last_game_state, last_action, None, events)
 
     # Save model after every round
     torch.save(self.model.state_dict(), "my-saved-model.pt")
