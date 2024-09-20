@@ -280,4 +280,100 @@ In the first round, we want to train the agent to collect coins and then later t
     In the play view, v2_2 appears to play better consistently in the mostly-empty scenario, where it has trained 200000 times, but not as well
     in the loot-crate scenario.
 
-    Tbh, we won't correct these features yet. Let us think about possible attemps to attack enemies. Let's go to v2_4
+    Tbh, we won't correct these features yet. Let us think about possible attemps to attack enemies. Let's go to v2_4.
+
+    Btw, also fixed crate_combo s.t. >= 3 instead of > 3
+
+--- 
+
+    Hello, we're here in v2_4. Let us get into killing some enemies yall. For that, let's implement first a feature which returns the first_move
+    for the closest enemy and also appropriate rewards for killing opponents.
+
+    Since we're introducing a new feature (at least one), we can't use our current model for training. That means we have to start from scratch.
+
+    Let us concentrate on some different approaches:
+
+    1. v2_4: Introduce enemies slowly, after it's already learned to move in low-crate scenarios
+    2. v2_5: Start with low-crate and peaceful agents already.
+
+    Here, we will first train on crates and then slowly introduce opponents. Nevertheless, we will include the feature for closest enemy
+
+    As rewards, let us consider rewards proportional to the coins.
+
+    Also, we need to account as well for the delay in reward after placing a bomb, so let us include an event for
+    ENEMY_POTENTIALLY_KILLED.
+
+    We also want to reward if we're last man standing. 
+
+        e.INVALID_ACTION: -0.1,
+        e.MOVED_LEFT: -0.01,
+        e.MOVED_RIGHT: -0.01,
+        e.MOVED_UP: -0.01,
+        e.MOVED_DOWN: -0.01,
+        e.WAITED: -0.02,
+        e.KILLED_SELF: -5,
+        e.BOMB_DROPPED: -0.1,
+        e.USELESS_BOMB: -0.3,
+        e.CRATE_COMBO: 0.7,
+        e.COIN_FOUND: 0.4,
+        e.SURVIVED_ROUND: 5,
+        e.COIN_COLLECTED: 1,
+        e.CRATE_POTENTIALLY_DESTROYED: 0.5,
+        e.ENEMY_POTENTIALLY_KILLED: 0.8,
+        e.KILLED_OPPONENT: 5,
+        e.LAST_AGENT_STANDING: 5,
+        #e.CRATE_DESTROYED: 0.5,
+        # Custom events
+        #e.COOL: 0.01,
+        e.WARM: - 0.05,
+        e.HOT: -0.05,
+        e.BOILING: -0.05,
+        e.FRESHENED_UP: 0.02,
+        e.STEP_SURVIVED: 0.01
+
+    --------
+
+    v2_5: Here, we will start training from scratch with peaceful agents in the mix.
+
+    After the first 1000 trainings, with eps(0.1 -> 0.01 w 500 rounds), the agent has adapted quite well to destroying crates
+    and surviving in about 30% of the time. It takes on average 250 steps and doesn't place as many useless bombs.
+
+    It hasn't learned to actively kill opponents, but instead it kills more by virtue of placing more bombs in general. Since the
+    peaceful agents are extremely dumb, they just walk into the bombs.
+
+    Let us train it overnight for 20000 iterations in the same scenario but with a bit more crates:
+
+        "almost-empty": {
+            "CRATE_DENSITY": 0.10,
+            "COIN_COUNT": 8
+        }
+
+    We reset eps(0.1 -> 0.01 w 5000 rounds) 
+
+    On average, the agent takes 300 steps and survives about 60% of the time. He kills on average
+    1 opponnent per round, which we believe is at this point merely coincidental. As the statistics for 
+    "ENEMY_POTENTIALLY_KILLED" show no siginificant learned behavior that makes it drop bombs within range
+    of enemies. The gameplay also shows that the agent is still hyperfocused on destroying crates and collecting coins.
+    He also can't seem to pathfind through enemies, so we need to correct that in the get_path_bfs functions.
+
+    After fixing these bugs, let us also try to improve the agent's focus on enemies. For that we probably need to lower
+    the rewards of crates and enhance the rewards of killing enemies. Maybe we need to include rewards for moving towards 
+    an enemy and the distance to them.
+
+    in model v2_5_1 we saved the current iteration to begin training with the new feature of distance and 
+    updated rewards.
+
+    ########## v2_5_2
+
+    We update the agent with the aforementioned strategies and let it train 30000 in mostly-empty with 3 peaceful
+    agents. The eps policy is at first somewhat exploratory, so the agent appears to be learning slower, but we will check
+    how it does afterwards.
+
+    We had to interrupt training because it had learned only up.
+
+    I believe the extra feature is confusing him, especially since we're not utilizing it. Let us create a new event
+    where we reward it for moving closer to enemies.
+
+    ----- v2_6
+
+    Here, let us remove the distance feature. It can be a bit confusing perhaps. 

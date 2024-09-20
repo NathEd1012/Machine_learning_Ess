@@ -71,7 +71,7 @@ def state_to_features(game_state: dict) -> np.array:
     can_place_bomb_features = can_place_bomb(game_state)
 
     # Next move to target: enemy
-    #next_move_enemy_features = get_path_bfs(game_state, target_types = ['enemy'])
+    next_move_enemy_features = get_path_bfs(game_state, target_types = ['enemy'])
 
     #layout(game_state)
 
@@ -84,7 +84,7 @@ def state_to_features(game_state: dict) -> np.array:
             how_many_crates_boom, # 1: how many crates get destroyed by placing a bomb here?
             next_move_safe_tile_features, # 1: which firsT_move towards safe_tile
             can_place_bomb_features, # 1: can I place a bomb?
-            #next_move_enemy_features # 1: next move to target
+            next_move_enemy_features # 1: next move to target
     ])
     
     #print(features)
@@ -369,6 +369,45 @@ def calculate_crates_destroyed(game_state):
                 break
 
     return [crates_destroyed]
+
+def calculate_enemies_in_blast_radius(game_state):
+    field = game_state['field']
+    agent_x, agent_y = game_state['self'][3]
+    rows, cols = field.shape
+
+    enemies = [enemy[3] for enemy in game_state['others']]
+    
+    # Blast radius
+    blast_radius = 3
+
+    # Directions
+    directions = [(0, -1), (1, 0), (0, 1), (-1, 0)]
+
+    # Enemies in range
+    enemies_in_range = 0
+
+    if (agent_x, agent_y) in enemies:
+        enemies_in_range += 1
+
+    # Check all four directions:
+    for dx, dy in directions:
+        for step in range(1, blast_radius + 1):
+            new_x, new_y = agent_x + dx * step, agent_y + dy * step
+
+        # Check if within bounds
+        if new_x < 0 or new_y < 0 or new_x >= rows or new_y >= cols:
+            break
+        
+        # Check what tile, break if wall
+        tile = field[new_x, new_y]
+        if tile == -1:
+            break
+
+        # Check if enemy in
+        if (new_x, new_y) in enemies:
+            enemies_in_range += 1
+
+    return enemies_in_range
 
 def get_path_bfs_safe_tile(game_state):
     """

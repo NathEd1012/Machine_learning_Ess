@@ -70,9 +70,6 @@ def state_to_features(game_state: dict) -> np.array:
     # Can place bomb?
     can_place_bomb_features = can_place_bomb(game_state)
 
-    # Next move to target: enemy
-    #next_move_enemy_features = get_path_bfs(game_state, target_types = ['enemy'])
-
     #layout(game_state)
 
     
@@ -83,8 +80,7 @@ def state_to_features(game_state: dict) -> np.array:
             next_move_crate_features, # 1: in which direction does the bfs say we should go for crate
             how_many_crates_boom, # 1: how many crates get destroyed by placing a bomb here?
             next_move_safe_tile_features, # 1: which firsT_move towards safe_tile
-            can_place_bomb_features, # 1: can I place a bomb?
-            #next_move_enemy_features # 1: next move to target
+            can_place_bomb_features # 1: can I place a bomb?
     ])
     
     #print(features)
@@ -175,7 +171,6 @@ def get_danger_map(game_state):
     field = game_state['field']
     rows, cols = field.shape
     danger_map = np.zeros_like(field, dtype=float)
-    explosion_map = game_state['explosion_map']
 
     for bomb_pos, bomb_timer in game_state['bombs']:
         bx, by = bomb_pos
@@ -209,11 +204,6 @@ def get_danger_map(game_state):
                     break
                 danger_map[bx - i, by] = min(danger_map[bx - i, by], danger_score)
 
-    for x in range(rows):
-        for y in range(cols):
-            if explosion_map[x, y] == 1:
-                danger_map[x, y] = -2
-
     return danger_map
 
 
@@ -243,10 +233,6 @@ def get_path_bfs(game_state, target_types =['coin', 'crate', 'enemy']):
     targets = []
     if 'coin' in target_types:
         targets.extend(game_state['coins'])
-    if 'crate' in target_types:
-        targets.extend((x, y) for x in range(rows) for y in range(cols) if field[x, y] == 1)
-    if 'enemy' in target_types:
-        targets.extend(enemy[3] for enemy in game_state['others'])
 
     # BFS to find shortest path
     while queue:

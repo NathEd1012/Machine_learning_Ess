@@ -55,7 +55,7 @@ def state_to_features(game_state: dict) -> np.array:
     bomb_features = get_bomb_features(own_position, game_state)    
 
     # Next move to target: coin
-    next_move_coin_features = get_path_bfs(game_state, target_types = ['coin'])
+    next_move_coin_features = get_path_bfs_coins(game_state)
 
     # Next move to target: crate
     next_move_crate_features = get_path_bfs_crates(game_state)
@@ -71,7 +71,7 @@ def state_to_features(game_state: dict) -> np.array:
     can_place_bomb_features = can_place_bomb(game_state)
 
     # Next move to target: enemy
-    #next_move_enemy_features = get_path_bfs(game_state, target_types = ['enemy'])
+    next_move_enemy_features = get_path_bfs_enemies(game_state)
 
     #layout(game_state)
 
@@ -84,7 +84,7 @@ def state_to_features(game_state: dict) -> np.array:
             how_many_crates_boom, # 1: how many crates get destroyed by placing a bomb here?
             next_move_safe_tile_features, # 1: which firsT_move towards safe_tile
             can_place_bomb_features, # 1: can I place a bomb?
-            #next_move_enemy_features # 1: next move to target
+            next_move_enemy_features # 1: next move to target
     ])
     
     #print(features)
@@ -217,7 +217,63 @@ def get_danger_map(game_state):
     return danger_map
 
 
-def get_path_bfs(game_state, target_types =['coin', 'crate', 'enemy']):
+def get_path_bfs_coins(game_state):
+    """
+    Using breadth-first-search, we want to determine the shortest path to our target.
+    Since there are walls and crates, this could make it complicated as a feature. 
+    For that reason, only return the next step: up, right, down, left
+    """
+    # dx, dy
+    directions = [(0, -1), (1, 0), (0, 1), (-1, 0)]
+    direction_names = [0, 1, 2, 3] # up, right, down, left
+
+    # Own position and field
+    field = game_state['field']
+    start_x, start_y = game_state['self'][3]
+    danger_map = get_danger_map(game_state)
+    enemies = [enemy[3] for enemy in game_state['others']]
+
+    rows, cols = field.shape
+    visited = set() # Keep track of tiles already visited
+
+    # BFS queue: stores (x, y, first_move) where first_move is initial direction
+    queue = deque([(start_x, start_y, None)])  
+    visited.add((start_x, start_y))  
+
+    # Get target positions (coins, crates, enemies)
+    targets = game_state['coins']
+
+    # BFS to find shortest path
+    while queue:
+        x, y, first_move = queue.popleft()
+
+        # Check if reached target
+        if (x, y) in targets:
+
+            if first_move is not None:
+                #print(first_move, direction_names)
+                return [direction_names[first_move]]
+
+        # Explore neighboring tiles
+        for i, (dx, dy) in enumerate(directions):
+            new_x, new_y = x + dx, y + dy
+
+            # Check if new position within bounds and not visited
+            if 0 <= new_x < rows and 0 <= new_y < cols and (new_x, new_y) not in visited:
+                if (field[new_x, new_y] == 0 and 
+                    danger_map[new_x, new_y] == 0
+                    and (new_x, new_y) not in enemies): # Free tile, no danger, no enemy
+                    visited.add((new_x, new_y))
+                    # Enque new position, passing first move
+                    if first_move is None:
+                        queue.append((new_x, new_y, direction_names[i]))
+                    else:
+                        queue.append((new_x, new_y, first_move))
+
+    # Return if no path to target
+    return [-1] # No valid move
+
+def get_path_bfs_enemies(game_state):
     """
     Using breadth-first-search, we want to determine the shortest path to our target.
     Since there are walls and crates, this could make it complicated as a feature. 
@@ -240,13 +296,7 @@ def get_path_bfs(game_state, target_types =['coin', 'crate', 'enemy']):
     visited.add((start_x, start_y))  
 
     # Get target positions (coins, crates, enemies)
-    targets = []
-    if 'coin' in target_types:
-        targets.extend(game_state['coins'])
-    if 'crate' in target_types:
-        targets.extend((x, y) for x in range(rows) for y in range(cols) if field[x, y] == 1)
-    if 'enemy' in target_types:
-        targets.extend(enemy[3] for enemy in game_state['others'])
+    targets = [enemy[3] for enemy in game_state['others']]
 
     # BFS to find shortest path
     while queue:
@@ -265,7 +315,8 @@ def get_path_bfs(game_state, target_types =['coin', 'crate', 'enemy']):
 
             # Check if new position within bounds and not visited
             if 0 <= new_x < rows and 0 <= new_y < cols and (new_x, new_y) not in visited:
-                if field[new_x, new_y] == 0 and danger_map[new_x, new_y] == 0: # Free tile
+                if (field[new_x, new_y] == 0 and 
+                    danger_map[new_x, new_y] == 0): # Free tile, no danger, no enemy
                     visited.add((new_x, new_y))
                     # Enque new position, passing first move
                     if first_move is None:
@@ -290,6 +341,7 @@ def get_path_bfs_crates(game_state):
     field = game_state['field']
     start_x, start_y = game_state['self'][3]
     danger_map = get_danger_map(game_state)
+    enemies = [enemy[3] for enemy in game_state['others']]
 
     rows, cols = field.shape
     visited = set() # Keep track of tiles already visited
@@ -318,7 +370,9 @@ def get_path_bfs_crates(game_state):
 
             # Check if new position within bounds and not visited
             if 0 <= new_x < rows and 0 <= new_y < cols and (new_x, new_y) not in visited:
-                if field[new_x, new_y] == 0 and danger_map[new_x, new_y] == 0: # Free tile, no danger
+                if (field[new_x, new_y] == 0 and 
+                    danger_map[new_x, new_y] == 0 and
+                    (new_x, new_y) not in enemies): # Free tile, no danger, no enemy between.
                     visited.add((new_x, new_y))
                     # Enque new position, passing first move
                     if first_move is None:
@@ -370,6 +424,45 @@ def calculate_crates_destroyed(game_state):
 
     return [crates_destroyed]
 
+def calculate_enemies_in_blast_radius(game_state):
+    field = game_state['field']
+    agent_x, agent_y = game_state['self'][3]
+    rows, cols = field.shape
+
+    enemies = [enemy[3] for enemy in game_state['others']]
+    
+    # Blast radius
+    blast_radius = 3
+
+    # Directions
+    directions = [(0, -1), (1, 0), (0, 1), (-1, 0)]
+
+    # Enemies in range
+    enemies_in_range = 0
+
+    if (agent_x, agent_y) in enemies:
+        enemies_in_range += 1
+
+    # Check all four directions:
+    for dx, dy in directions:
+        for step in range(1, blast_radius + 1):
+            new_x, new_y = agent_x + dx * step, agent_y + dy * step
+
+        # Check if within bounds
+        if new_x < 0 or new_y < 0 or new_x >= rows or new_y >= cols:
+            break
+        
+        # Check what tile, break if wall
+        tile = field[new_x, new_y]
+        if tile == -1:
+            break
+
+        # Check if enemy in
+        if (new_x, new_y) in enemies:
+            enemies_in_range += 1
+
+    return enemies_in_range
+
 def get_path_bfs_safe_tile(game_state):
     """
     Using breadth-first-search, determine the shortest path to a safe tile.
@@ -384,6 +477,7 @@ def get_path_bfs_safe_tile(game_state):
     field = game_state['field']
     start_x, start_y = game_state['self'][3]  # agent's current position
     danger_map = get_danger_map(game_state)  # get the map showing danger from bombs
+    enemies = [enemy[3] for enemy in game_state['others']]
     #print(danger_map)
 
     rows, cols = field.shape
@@ -408,7 +502,9 @@ def get_path_bfs_safe_tile(game_state):
 
             # Check if new position is within bounds and not visited
             if 0 <= new_x < rows and 0 <= new_y < cols and (new_x, new_y) not in visited:
-                if field[new_x, new_y] == 0:  # Free tile (no wall or crate)
+                if (field[new_x, new_y] == 0 and 
+                    danger_map[new_x, new_y] == 0 and
+                    (new_y, new_y) not in enemies):  # Free tile, no danger, no enemy between
                     visited.add((new_x, new_y))
                     # Enqueue the new position, passing the first move
                     if first_move is None:

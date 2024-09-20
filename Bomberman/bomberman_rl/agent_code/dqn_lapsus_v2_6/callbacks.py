@@ -5,7 +5,7 @@ import random
 import numpy as np
 
 from .model import DQN_Lapsus, ReplayBuffer
-from .features import state_to_features, get_danger_map
+from .features import state_to_features
 
 ACTIONS = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT', 'BOMB']
 

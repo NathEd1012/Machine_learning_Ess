@@ -40,6 +40,7 @@ def act(self, game_state: dict) -> str:
     # Convert game_state to feature vector:
     state_features = state_to_features(game_state)
 
+
     # If none, return default
     if state_features is None:
         return 'WAIT'
