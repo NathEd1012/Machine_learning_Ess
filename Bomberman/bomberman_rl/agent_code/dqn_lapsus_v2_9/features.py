@@ -53,7 +53,7 @@ def state_to_features(game_state: dict) -> np.array:
     neighboring_tiles_features = get_neighboring_tiles(own_position, game_state)
 
     # Neighboring bombs
-    #bomb_features = get_bomb_features(own_position, game_state)    
+    bomb_features = get_bomb_features(own_position, game_state)    
 
     # Next move to target: coin
     next_move_coin_features = get_path_bfs_coins(game_state)
@@ -75,15 +75,18 @@ def state_to_features(game_state: dict) -> np.array:
 
     # Is closest enemy in dead end?
     enemy_positions = [enemy[3] for enemy in game_state['others']]
+    max_safe_tile_enemies = 5
     if len(enemy_positions) > 0:
         closest_enemy = min(
             enemy_positions,
             key = lambda pos: abs(pos[0] - own_position[0]) + abs(pos[1] - own_position[1])
         )
 
-        enemy_in_dead_end = is_enemy_in_dead_end(game_state, closest_enemy, threshold = 1)
+        enemy_safe_tiles = count_enemy_safe_tiles(game_state, 
+                                                  closest_enemy, 
+                                                  threshold = max_safe_tiles_enemies) / max_safe_tile_enemies
     else:
-        enemy_in_dead_end = [0]
+        enemy_safe_tiles = [0]
     
     
 
@@ -701,6 +704,74 @@ def is_enemy_in_dead_end(game_state, enemy_pos, depth = 3, threshold = 5):
 
     reachable_tiles = len(visited)
     return [int(reachable_tiles <= threshold)]
+
+def count_enemy_safe_tiles(game_state, enemy_pos, max_tiles=5):
+    """
+    Count how many safe tiles enemy has. If it reduces from old_game_state to new_game_state, I
+    will want to log it.
+    """
+    if enemy_pos is None:
+        return 0  # No enemy to evaluate
+
+    # Directions: Up, Right, Down, Left
+    directions = [(-1, 0), (0, 1), (1, 0), (0, -1)]
+
+    # Field information
+    field = game_state['field']
+    own_pos = game_state['self'][3]
+    bombs = game_state['bombs']
+    explosion_map = game_state['explosion_map']
+    rows, cols = field.shape
+
+    # Obstacles: walls, crates, explosions, own agent
+    obstacles = set()
+    for x in range(rows):
+        for y in range(cols):
+            if (field[x, y] == -1  # Wall
+                or field[x, y] == 1  # Crate
+                or explosion_map[x, y] != 0):  # Explosion
+                obstacles.add((x, y))
+
+    # Add bombs as obstacles
+    bomb_positions = [bomb[0] for bomb in bombs]
+    obstacles.update(bomb_positions)
+
+    # Add own agent as obstacle (assuming we can block the enemy)
+    obstacles.add(own_pos)
+
+    # Initialize BFS
+    queue = deque()
+    visited = set()
+    queue.append(enemy_pos)
+    visited.add(enemy_pos)
+
+    # Count of safe tiles
+    safe_tile_count = 1  # Start with the enemy's current position
+
+    while queue:
+        x, y = queue.popleft()
+
+        # Explore neighboring tiles
+        for dx, dy in directions:
+            nx, ny = x + dx, y + dy
+
+            # Check boundaries and obstacles
+            if (0 <= nx < rows and 0 <= ny < cols
+                and (nx, ny) not in visited
+                and (nx, ny) not in obstacles
+                and field[nx, ny] == 0):  # Free tile
+
+                visited.add((nx, ny))
+                queue.append((nx, ny))
+                safe_tile_count += 1
+
+                # Early stopping if safe tiles exceed max_tiles
+                if safe_tile_count > max_tiles:
+                    return safe_tile_count  # Enough safe tiles, enemy not constrained
+
+    # Return the total number of safe tiles accessible to the enemy
+    return safe_tile_count
+
 
 # Determine whether placing a bomb here is useless
 def is_useless_bomb(bomb_position, game_state):

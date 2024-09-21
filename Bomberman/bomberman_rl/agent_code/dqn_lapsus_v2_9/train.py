@@ -324,23 +324,23 @@ def reward_from_events(self, events: List[str]):
         e.USELESS_BOMB: -0.3,
         e.CRATE_COMBO: 0.7,
         e.COIN_FOUND: 0.4,
-        e.SURVIVED_ROUND: 5,
+        e.SURVIVED_ROUND: 10,
         e.COIN_COLLECTED: 1,
         e.CRATE_POTENTIALLY_DESTROYED: 0.5,
         e.ENEMY_POTENTIALLY_KILLED: 2,
-        e.KILLED_OPPONENT: 10,
+        e.KILLED_OPPONENT: 5,
         #e.LAST_AGENT_STANDING: 5,
         #e.CRATE_DESTROYED: 0.5,
         # Custom events
         #e.COOL: 0.01,
         e.WARM: - 0.05,
         e.HOT: -0.1,
-        e.BOILING: -0.15,
+        e.BOILING: -0.3,
         e.FRESHENED_UP: 0.05,
-        #e.STEP_SURVIVED: 0.01,
+        e.STEP_SURVIVED: 0.01,
         e.CLOSER_TO_ENEMY: 0.1,
         e.FURTHER_FROM_ENEMY: -0.1,
-        e.ENEMY_IN_DEAD_END: 0.5,
+        #e.ENEMY_IN_DEAD_END: 0.5,
         e.IN_DEAD_END: -0.5
     }
     reward_sum = 0
