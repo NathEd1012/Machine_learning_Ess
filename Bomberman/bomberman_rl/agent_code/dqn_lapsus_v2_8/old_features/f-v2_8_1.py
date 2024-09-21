@@ -53,7 +53,7 @@ def state_to_features(game_state: dict) -> np.array:
     neighboring_tiles_features = get_neighboring_tiles(own_position, game_state)
 
     # Neighboring bombs
-    #bomb_features = get_bomb_features(own_position, game_state)    
+    bomb_features = get_bomb_features(own_position, game_state)    
 
     # Next move to target: coin
     next_move_coin_features = get_path_bfs_coins(game_state)
@@ -73,34 +73,21 @@ def state_to_features(game_state: dict) -> np.array:
     # Next move to target: enemy
     next_move_enemy_features = get_path_bfs_enemies(game_state)
 
-    # Is closest enemy in dead end?
-    enemy_positions = [enemy[3] for enemy in game_state['others']]
-    if len(enemy_positions) > 0:
-        closest_enemy = min(
-            enemy_positions,
-            key = lambda pos: abs(pos[0] - own_position[0]) + abs(pos[1] - own_position[1])
-        )
-
-        enemy_in_dead_end = is_enemy_in_dead_end(game_state, closest_enemy, threshold = 1)
-    else:
-        enemy_in_dead_end = [0]
-    
-    
-
     #layout(game_state)
 
     
     features = np.concatenate([
             neighboring_tiles_features, # 4: up, right, down, left
-            #bomb_features, # 5: up, right, down, left, here
+            bomb_features, # 5: up, right, down, left, here
             next_move_coin_features, # 1: in which direction does the bfs say we should go for coin
             next_move_crate_features, # 1: in which direction does the bfs say we should go for crate
             how_many_crates_boom, # 1: how many crates get destroyed by placing a bomb here?
-            next_move_safe_tile_features, # 2: which firsT_move towards safe_tile, how many steps to reach it?
+            next_move_safe_tile_features, # 1: which firsT_move towards safe_tile
             can_place_bomb_features, # 1: can I place a bomb?
-            next_move_enemy_features, # 9: next move to target, rel_x, rel_y for every target
-            enemy_in_dead_end, # 1: Is enemy in dead end with less than threshold available tiles?
+            next_move_enemy_features # 9: next move to target, rel_x, rel_y for every target
     ])
+    
+    print(features)
 
 
     return features
@@ -179,7 +166,7 @@ def get_bomb_features(own_position, game_state):
 
     return bomb_features
 
-# Get map of tiles that will be dangerous
+
 def get_danger_map(game_state):
     """
     Returns a map showing the danger level of each tile based on the
@@ -229,7 +216,7 @@ def get_danger_map(game_state):
 
     return danger_map
 
-# Get path to coins using bfs
+
 def get_path_bfs_coins(game_state):
     """
     Using breadth-first-search, we want to determine the shortest path to our target.
@@ -264,6 +251,7 @@ def get_path_bfs_coins(game_state):
         if (x, y) in targets:
 
             if first_move is not None:
+                #print(first_move, direction_names)
                 return [direction_names[first_move]]
 
         # Explore neighboring tiles
@@ -285,7 +273,6 @@ def get_path_bfs_coins(game_state):
     # Return if no path to target
     return [-1] # No valid move
 
-# Get path to (adjacent) enemies using bfs
 def get_path_bfs_enemies(game_state):
     """
     Using breadth-first-search, we want to determine the shortest path to our target.
@@ -309,15 +296,19 @@ def get_path_bfs_enemies(game_state):
     max_targets = 3
 
     enemy_features = []
+
+    #print("\n", game_state['step'])
     
     # Loop for each enemy
     for enemy_pos in targets:
+        #print(enemy_pos)
         enemy_x, enemy_y = enemy_pos
 
         # Initialize BFS
         visited = set()
         queue = deque()
         queue.append((start_x, start_y, None))
+        #print("\n", queue)
         queue.append((start_x, start_y, None))
         visited.add((start_x, start_y))
 
@@ -338,6 +329,7 @@ def get_path_bfs_enemies(game_state):
                 else:
                     enemy_features.append([-1, rel_x, rel_y]) # Default if already at enemy
 
+                #print("Reachable")
                 found = True
 
                 break
@@ -361,6 +353,7 @@ def get_path_bfs_enemies(game_state):
 
         # Enemy unreachable, use default:
         if not found:
+            #print("Not reachable")
             rel_x, rel_y = enemy_x - start_x, enemy_y - start_y
             enemy_features.append([default_targets[0], rel_x, rel_y])
 
@@ -368,9 +361,9 @@ def get_path_bfs_enemies(game_state):
     while len(enemy_features) < max_targets:
         enemy_features.append(default_targets)
 
+    #print(enemy_features)
     return np.array(enemy_features).flatten()
 
-# Get path to (adjacent) crates using bfs
 def get_path_bfs_crates(game_state):
     """
     Similar to get_path_bfs, but that algorithm works by finding a target and walking onto it.
@@ -405,6 +398,7 @@ def get_path_bfs_crates(game_state):
         for crate_x, crate_y in crates:
             if abs(crate_x - x) + abs(crate_y - y) == 1: # Manhattan
                 if first_move is not None:
+                    #print(len(queue), queue, first_move)
                     return [first_move]
 
         # Explore neighboring tiles
@@ -424,6 +418,7 @@ def get_path_bfs_crates(game_state):
                         queue.append((new_x, new_y, first_move))
 
     # Return if no path to target
+    #print("No valid move")
     return [-1] # No valid move
 
 # Calculate how many crates we could destroy:
@@ -466,7 +461,6 @@ def calculate_crates_destroyed(game_state):
 
     return [crates_destroyed]
 
-# Calculate how many enemies we could kill
 def calculate_enemies_in_blast_radius(game_state):
     field = game_state['field']
     agent_x, agent_y = game_state['self'][3]
@@ -506,7 +500,6 @@ def calculate_enemies_in_blast_radius(game_state):
 
     return enemies_in_range
 
-# Get tiles that will be affected if a bomb goes off at bx, by
 def get_affected_tiles(bx, by, field):
     """
     Returns a set of tiles that will be affected by the bomb at (bx, by).
@@ -528,7 +521,6 @@ def get_affected_tiles(bx, by, field):
                 break
     return affected_tiles
 
-# Determine whether a path to a tile is safe in the time it takes us to reach it
 def is_path_safe_from_bombs(path, bombs, field):
     """
     Check if a bomb will explode on the path to the target tile within the
@@ -546,7 +538,6 @@ def is_path_safe_from_bombs(path, bombs, field):
             
     return True # Path is safe
 
-# Determine if tile will be safe when a bomb goes off
 def will_tile_be_safe_when_bombs_explode(target_x, target_y, bombs, field, game_state):
     """
     Check if the potential safe tile, which may be safe in the time we get there,
@@ -562,7 +553,6 @@ def will_tile_be_safe_when_bombs_explode(target_x, target_y, bombs, field, game_
     
     return True
 
-# Get a path (first_move) to the next safe tile
 def get_path_bfs_safe_tile(game_state):
     # Directions: (dx, dy) 
     directions = [(-1, 0), (0, 1), (1, 0), (0, -1)]
@@ -605,7 +595,7 @@ def get_path_bfs_safe_tile(game_state):
             if is_path_safe_from_bombs(path, bombs, field):
                 # Check if tile will be safe when bombs_explode, not only
                 if will_tile_be_safe_when_bombs_explode(x, y, bombs, field, game_state):
-                    return [first_move, steps]
+                    return [first_move]
         
         # Find adjacent tiles
         for i, (dx, dy) in enumerate(directions):
@@ -639,17 +629,14 @@ def get_path_bfs_safe_tile(game_state):
                     queue.append((new_x, new_y, first_move, new_steps, path + [(x, y)]))
 
     # No free tile
-    return [-1, -1]
+    return [-1]
 
-# Determine if an enemy is in a dead end, with threshold available tiles.
 def is_enemy_in_dead_end(game_state, enemy_pos, depth = 3, threshold = 5):
     """
     I want to check whether my closest enemy has placed itself in a dead end, 
     even using my own agent as an obstacle.
     """
     # Directions 
-    if enemy_pos is None:
-        return [0]
     directions = [(-1, 0), (0, 1), (1, 0), (0, -1)]
 
     # Field info
