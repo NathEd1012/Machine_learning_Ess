@@ -590,64 +590,20 @@ In the first round, we want to train the agent to collect coins and then later t
         self.fc3 = nn.Linear(64, 32)
         self.fc4 = nn.Linear(32, self.number_actions)
 
+    ---- v2_14 here
 
-    Save v2_12-2.pt
+    results/results_1-2
 
-    As a further training strategy for v2_12, let us introduce first 2000 rounds of slightly more crates (mostly-empty)
-    before introducing aggressive enemies.
+    We trained on 2000 c-s-l-h, with similar results to v2_12, almost identical in fact. Weirdly. Then 5000 rounds of almost-empty. significantly
+    worse results than v2_12. Let's try running it against rule-based.
 
-    Now, for the next 5000 rounds, we introduce in mostly-empty one aggressive agent: v2_13. 
+    100 rounds of a-e vs 2 peaceful, 1 v2_12 (res-100-2peaceful-1rule-1v2_14-ae.json):
 
-    As expected, the number of opponents killed went down a bit now that there is another agent targetting it and others, 
-    but overall, it shows signs of improvement when viewing the game play against v2_13 and rule based.
+        v2_14 gets absolutely bodied by rule based by a factor of almost 5-7 x score, 4 x kills, 20 x coins.
 
-    Let's check out some games:
+    Let's save the model for later v2_14-1.pt
 
-    results/results_2
+    This approach seems in most ways worse than our current game plan. Since we can simultaneously train 2 models, let'S
+    try increasing our agent's situational awareness by feeding it more info regarding the field. For this, let's scratch
+    v2_14 and go to v2_15
 
-    100 rounds of mostly-empty with 2 peaceful, 1 v2_13, 1 v2_12: (res-100-2peaceful-1v2_13-1v2_12.json)
-
-        This version (which has trained longer on this scenario and in general), easily beats v2_13 by a factor of 2 in score
-        and kills.
-
-    100 rounds of mostly-empty with 2 peaceful, 1 rule based, 1 v2_12: (res-100-2peaceful-1rule-1v2_12.json)
-
-        On first impression, both agents get roughly as many kills, although rule based doubles the score because it
-        searches for significantly more coins.
-
-    The game play shows him struggling immensely against rule based agents, it doesn't manage to kill them at all.
-
-    100 rounds of mostly-empty with 3 dqn_v2_13 1 v2_12: (100-res-3v2_13-1v2_12.json)
-
-        It manages to be better than all 3 combined more or less. 
-
-    Save v2_12-3.pt
-
-    I think maybe we should increase its situational awareness. Let's take a copy of this and give it more features about 
-    the environment? Maybe that will help it. Meanwhile, let's continue training it with more crates.
-
-    After 5000 rounds with some-crates, the agent shows signs of slight improvement. Let's run it a bit against v2_13 and rule based.
-
-
-    results/results_3
-
-    100 rounds 2 peaceful 1 v2_13 1 v2_12 on some-crates (res-100-2peaceful-1v2_12-1v2_12-sc):
-
-        At this point, it's clear that v2_12 has taken advantage. Let's see how it fairs against rule based
-
-    100 rounds 2 peaceful 1 v2_12 1 rule on s-c (res-100-2peaceful-1rule-1v2_12-sc.json):
-
-        Absolutely no competition, rule bodies v2_12 by miles. 
-
-    Let's save v2_12-4.pt.
-
-    Let's train 10000 with 2 peaceful 1 rule based. Let's see how well we do.
-
-    100 rounds of 2 peaceful 1 rule on more-crates: (res-100-2peaceful-1v2_12-1rule-mc.json)
-
-        rule based edges v2_12 by 5x score and kills.
-
-    Let's train it 20000 times on classic with 1 peaceful, 1 rule 1 v2_13
-
-    It's getting better indeed, surviving the round more often
-        

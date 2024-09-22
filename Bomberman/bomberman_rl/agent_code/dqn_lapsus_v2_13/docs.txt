@@ -523,3 +523,70 @@ In the first round, we want to train the agent to collect coins and then later t
     Immediately, they learn to destroy crates, at on average 6 per round after merely 150-200 training rounds. At this stage,
     the survival rate has decreased, last agent standing as well but not as drastically, very quickly they remember that they
     like killing opponents, averaging at least 1.5 after only 400 rounds. 
+
+    After training, we see again no differences at all between v2_12 and v2_13. For this reason, we'll instead try out a different
+    network architecture with an additional hidden layer.
+
+    Both agents get on average 2 / 3 of the opponents per game, only 2 / 8 of the coins. In the gameplay we can see that the agent 
+    is very aggressive, completely disregarding coins for a chance to go get a kill. In the long term, this is a valid strategy since
+    the classic mode has 9 coins, meaning that it would only need 2 kills to win. However, obviously other agents will also be searching
+    for those kills. On approx 50% of the time, ours was the last agent standing, meaning that due to its aggressiveness, it often corners
+    itself with a bomb. 
+
+    Once that all other agents are dead, it loses interest in any of the other rewards, oscillating back and forth. This was not the case
+    in coin-slightly-less-heaven, in that scenario, it immediately went to collect all other coins afterwards.
+
+    Before moving on with the next training scenario, let us gather some statistics from the game play:
+
+    Results 1 (results/results_1): 
+
+    We save the stats for 
+    100 rounds of playing against: 2 peacefuls, 1 laurin on scenario coin-slightly-less-heaven (res-100-2peaceful-1v2_13-cslh.json),
+    100 rounds of 2 peacefuls 1 v2_13 on c-s-l-h (res-100-2peaceful-1v2_13-cslh.json),
+        this shows that agent v2_12 has learned significantly more complicated strategies, beating v2_13 by almost twice the total score,
+        total kills, bombs dropped and even efficiency, performing less moves for more score. For safety, let's run the scenario again 
+        (res-100-2peaceful-1v2_13-cslh-2.json). Indeed this second time confirms our results, even spreading the difference apart.
+        It would seem as though the more complicated network paid off despite showing no advantage in training (against peaceful! agents).
+        Note that none of these agents have trained against aggressive opponents yet.
+        v2_12 does kill itself 50% more often, since it places significantly (100%) more bombs.
+    100 rounds of 2 peacefuls 1 v2_13 on almost-empty (res-100-2peaceful-1v2_13-1v2_12-ae.json, res-100-2peaceful-1v2_13-1v2_12-ae-2.json),
+        in this scenario, the shear is less pronounced. v2_12 does outperform v2_13 in areas such as kills, score,
+        while having to move significantly less, but it collects e.g. less coins, the difference is less pronounced.
+    100 rounds of 2 peacefuls 1 v2_13 on mostly-empty (0.2 crate, 15 coins) (res-100-2peaceful-1v2_13-1v2_12-me),
+        In this scenario, which none of the agents have trained yet, the statistics are almost comparable. Showing only a slight advantage
+        for v2_12, the second time (res-100-2peaceful-1v2_13-1v2_12-me-2.json) a slight advantage for v2_13
+
+        After many 100 more (-3, -4).json, it actually shows a clear advantage for v2_13. Let us compare with a new new scenario 
+        (some-crates: crates 0.3, coins 15) and repeat the stats for almost-empty (...ae-3.json).
+
+        On almost-empty, v2_12 wins again.
+    100 rounds of 2 peacefuls 1 v2_13 on some-crates (res-100-2peaceful-1v2_13-1v2_12-sc.json)
+        On some-crates, the tables have turned completely, showing almost a double advantage for v2_13 on most statistics.
+        Even walking less to achieve that.
+        The viewing of the game-play confirms that there is still room for improvement, particularly the aggressiveness, since
+        as soon as no more agents are present, the agents disregard all other targets.
+
+        Let's see how both would faire against rule-based
+
+    100 rounds of 2 peacefuls 1 rule_based on almost-empty
+
+        (res-100-2peaceful-1rule-1v2_12-ae.json, ...ae-2.json) 
+        v2_12, with its more aggressive behavior, manages roughly more kills than rule based, but since it
+        concentrates so much on other agents, its score diminishes since it doesn't get as many coins.
+
+        Rule based gets twice the score, but just as many kills.
+
+        (res-100-2peaceful-1rule-1v2_13-ae.json, ...ae-2.json)
+        v2_13 shows a similar result as v2_12.
+
+    With these things in mind, it's apparent that v2_12 learns better on the things it knows but doesn't manage
+    to achieve as good results as v2_13 in scenarios that slightly overwhelm it. We believe it's better then to teach
+    v2_12 more scenarios instead of depending on v2_13. From here on we discontinue v2_13 as a learning model and 
+    start training v2_14, with a new architecture: 
+
+        # fully connected layers
+        self.fc1 = nn.Linear(self.input_size, 64)
+        self.fc2 = nn.Linear(64, 64)
+        self.fc3 = nn.Linear(64, 32)
+        self.fc4 = nn.Linear(32, self.number_actions)
+

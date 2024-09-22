@@ -13,12 +13,12 @@ LEARNING_RATE = 0.0001
 DISCOUNT_FACTOR = 0.95
 INITIAL_EPSILON = 0.01
 FINAL_EPSILON = 0.01
-EPSILON_DECAY = 2500
+EPSILON_DECAY = 1000
 NUMBER_OF_FEATURES = 25
 NUMBER_OF_ACTIONS = 6
 
 # ReplayMemory
-CAPACITY = 10000
+CAPACITY = 20000
 BATCH_SIZE = 64
 
 class DQN_Lapsus(nn.Module):
@@ -33,9 +33,10 @@ class DQN_Lapsus(nn.Module):
         self.number_actions = number_actions
 
         # fully connected layers
-        self.fc1 = nn.Linear(self.input_size, 128)
-        self.fc2 = nn.Linear(128, 128)
-        self.fc3 = nn.Linear(128, self.number_actions)
+        self.fc1 = nn.Linear(self.input_size, 64)
+        self.fc2 = nn.Linear(64, 64)
+        self.fc3 = nn.Linear(64, 32)
+        self.fc4 = nn.Linear(32, self.number_actions)
 
         # MSE for loss function
         self.loss_fn = nn.SmoothL1Loss()
@@ -54,7 +55,8 @@ class DQN_Lapsus(nn.Module):
     def forward(self, x):
         x = torch.relu(self.fc1(x))
         x = torch.relu(self.fc2(x))
-        actions = self.fc3(x)
+        x = torch.relu(self.fc3(x))
+        actions = self.fc4(x)
 
         return actions
 

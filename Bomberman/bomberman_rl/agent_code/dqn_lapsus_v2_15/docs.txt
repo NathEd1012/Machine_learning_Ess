@@ -626,28 +626,46 @@ In the first round, we want to train the agent to collect coins and then later t
     I think maybe we should increase its situational awareness. Let's take a copy of this and give it more features about 
     the environment? Maybe that will help it. Meanwhile, let's continue training it with more crates.
 
-    After 5000 rounds with some-crates, the agent shows signs of slight improvement. Let's run it a bit against v2_13 and rule based.
+    ------ v2_15 here
 
+    We encoded more thorough situational awareness for our agent, passing 25 positional arguments including walls, 
+    crates, coins, enemies, bombs in an L1 norm around it. In total we now have 41 features, let's see if computationally 
+    it represents a problem.
 
-    results/results_3
+    After the first 2000 rounds of c-s-l-h it shows a mastery of collecting coins and then killing opponents. However, 
+    it appears to kill itself almost every single time afterwards. While the rewards increase, the steps decrease so that
+    it finishes in on average 100 steps.
 
-    100 rounds 2 peaceful 1 v2_13 1 v2_12 on some-crates (res-100-2peaceful-1v2_12-1v2_12-sc):
+    Similarly to v2_12, this agent usually kills 2 / 3 of the other agents before offing itself.
 
-        At this point, it's clear that v2_12 has taken advantage. Let's see how it fairs against rule based
+    In comparison to v2_12, it seems to be doing a bit worse off in general, surviving less, getting fewer rewards,
+    killing fewer opponents. Advantageously, at least, we don't see any increase in training time. Maybe it's even
+    faster because the rounds are slightly shorter.
 
-    100 rounds 2 peaceful 1 v2_12 1 rule on s-c (res-100-2peaceful-1rule-1v2_12-sc.json):
+    So far, the increased situational awareness shows no advantages with respect to the reduced one. Indeed only 
+    disadvantages so far.
 
-        Absolutely no competition, rule bodies v2_12 by miles. 
+    Let's begin on 5000 of almost-empty with 3 peaceful opponents.        
 
-    Let's save v2_12-4.pt.
+    Let's see how it does against rule based and v2_13:
 
-    Let's train 10000 with 2 peaceful 1 rule based. Let's see how well we do.
+    100 rounds of 2peaceful 1 v2_13: (res-100-2peaceful-1v2_13-1v2_15-ae.json)
 
-    100 rounds of 2 peaceful 1 rule on more-crates: (res-100-2peaceful-1v2_12-1rule-mc.json)
+        v2_15 wins slightly but kills itself more often.
 
-        rule based edges v2_12 by 5x score and kills.
+    100 rounds of 2peaceful 1 rule based: (res-100-2peaceful-1rule-1v2_15-ae.json)
 
-    Let's train it 20000 times on classic with 1 peaceful, 1 rule 1 v2_13
+        ok...
 
-    It's getting better indeed, surviving the round more often
-        
+    Then 2000 rounds of mostly-empty
+
+    Now 5000 rounds of m-e w/ v2_13
+
+    So far this agent performs parallely worse than v2_12 in all aspects except coin collecting. Apparently, the 
+    extra situational awareness helps him in that area. 
+
+    Save v2_15-1.pt
+
+    5000 on s-c with 2 peaceful 1 v2_13.
+
+    Now 5000 with 1 rule based and m-c.

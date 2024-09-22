@@ -30,6 +30,18 @@ SCENARIOS = {
         "CRATE_DENSITY": 0.2,
         "COIN_COUNT": 15
     },
+    "some-crates": {
+        "CRATE_DENSITY": 0.3,
+        "COIN_COUNT": 15
+    },
+    "more-crates": {
+        "CRATE_DENSITY": 0.45,
+        "COIN_COUNT": 9
+    },
+    "more-more-crates": {
+        "CRATE_DENSITY": 0.75,
+        "COIN_COUNT": 9
+    },
     "almost-empty": {
         "CRATE_DENSITY": 0.10,
         "COIN_COUNT": 8
