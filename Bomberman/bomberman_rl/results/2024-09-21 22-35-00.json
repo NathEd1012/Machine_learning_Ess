@@ -1,0 +1,77 @@
+{
+    "by_agent": {
+        "dqn_lapsus_v2_11": {
+            "bombs": 17,
+            "coins": 3,
+            "crates": 20,
+            "invalid": 11,
+            "kills": 5,
+            "moves": 203,
+            "rounds": 5,
+            "score": 28,
+            "steps": 233,
+            "suicides": 1,
+            "time": 0.5472118854522705
+        },
+        "peaceful_agent_0": {
+            "invalid": 89,
+            "moves": 120,
+            "rounds": 5,
+            "score": 0,
+            "steps": 209,
+            "time": 0.014774084091186523
+        },
+        "peaceful_agent_1": {
+            "invalid": 194,
+            "moves": 218,
+            "rounds": 5,
+            "score": 0,
+            "steps": 412,
+            "time": 0.023595571517944336
+        },
+        "rule_based_agent": {
+            "bombs": 39,
+            "coins": 25,
+            "crates": 40,
+            "invalid": 2,
+            "kills": 8,
+            "moves": 578,
+            "rounds": 5,
+            "score": 65,
+            "steps": 624,
+            "time": 0.438873291015625
+        }
+    },
+    "by_round": {
+        "Round 01 (2024-09-21 22-33-53)": {
+            "coins": 8,
+            "kills": 3,
+            "steps": 244,
+            "suicides": 0
+        },
+        "Round 02 (2024-09-21 22-34-19)": {
+            "coins": 8,
+            "kills": 3,
+            "steps": 141,
+            "suicides": 0
+        },
+        "Round 03 (2024-09-21 22-34-34)": {
+            "coins": 1,
+            "kills": 1,
+            "steps": 28,
+            "suicides": 1
+        },
+        "Round 04 (2024-09-21 22-34-38)": {
+            "coins": 8,
+            "kills": 3,
+            "steps": 142,
+            "suicides": 0
+        },
+        "Round 05 (2024-09-21 22-34-52)": {
+            "coins": 3,
+            "kills": 3,
+            "steps": 69,
+            "suicides": 0
+        }
+    }
+}

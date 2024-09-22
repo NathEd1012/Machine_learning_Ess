@@ -208,10 +208,12 @@ def custom_events(self, old_game_state, self_action, new_game_state, events):
         if enemy_in_dead_end:
             events.append(e.ENEMY_IN_DEAD_END)
 
-    # Check if self in dead end
-    _, steps = get_path_bfs_safe_tile(new_game_state)
-    if steps == -1:
-        events.append("IN_DEAD_END")
+        # Check if went from escape possibility to certain death:
+        _, steps_old = get_path_bfs_safe_tile(old_game_state)
+        _, steps_new = get_path_bfs_safe_tile(new_game_state)
+        if steps_old >= 0 and steps_new == -1:
+            # Went from escape routes to sudden
+            events.append("IN_DEAD_END")
 
         
 

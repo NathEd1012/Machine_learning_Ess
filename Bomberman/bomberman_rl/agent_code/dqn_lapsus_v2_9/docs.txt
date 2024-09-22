@@ -443,5 +443,11 @@ In the first round, we want to train the agent to collect coins and then later t
 
     Let's tweak the rewards:
 
+    We trained the agent on 5000 rounds of almost-empty with 3 peaceful agents. It succesfully learned to wait before placing 
+    bombs to get a chance of killing an opponent, it seems to prioritize destroying crates over finding coins.
+
+    Training shows promising results. Let us concentrate on refining the last features before we move on. Particularly, adapting the
+    pathfinding to crates and coins to account for the new safe tile architecture.
+
     
 

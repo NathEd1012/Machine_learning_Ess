@@ -75,21 +75,19 @@ def state_to_features(game_state: dict) -> np.array:
 
     # Is closest enemy in dead end?
     enemy_positions = [enemy[3] for enemy in game_state['others']]
-    max_safe_tile_enemies = 5
+    max_safe_tiles_enemies = 5
     if len(enemy_positions) > 0:
         closest_enemy = min(
             enemy_positions,
             key = lambda pos: abs(pos[0] - own_position[0]) + abs(pos[1] - own_position[1])
         )
 
-        enemy_safe_tiles = count_enemy_safe_tiles(game_state, 
+        enemy_safe_tiles_features = count_enemy_safe_tiles(game_state, 
                                                   closest_enemy, 
-                                                  threshold = max_safe_tiles_enemies) / max_safe_tile_enemies
+                                                  max_tiles = max_safe_tiles_enemies)
     else:
-        enemy_safe_tiles = [0]
+        enemy_safe_tiles_features = [0]
     
-    
-
     #layout(game_state)
 
     
@@ -102,7 +100,7 @@ def state_to_features(game_state: dict) -> np.array:
             next_move_safe_tile_features, # 2: which firsT_move towards safe_tile, how many steps to reach it?
             can_place_bomb_features, # 1: can I place a bomb?
             next_move_enemy_features, # 9: next move to target, rel_x, rel_y for every target
-            enemy_in_dead_end, # 1: Is enemy in dead end with less than threshold available tiles?
+            enemy_safe_tiles_features # 3: How many safe tiles do my enemies have if I place a bomb here?
     ])
 
 
@@ -337,9 +335,9 @@ def get_path_bfs_enemies(game_state):
                 rel_y = enemy_y - start_y
 
                 if first_move is not None:
-                    enemy_features.append([first_move, rel_x, rel_y])
+                    enemy_features.append([first_move, rel_x / rows, rel_y / cols])
                 else:
-                    enemy_features.append([-1, rel_x, rel_y]) # Default if already at enemy
+                    enemy_features.append([-1, rel_x / rows, rel_y / cols]) # Default if already at enemy
 
                 found = True
 
@@ -365,7 +363,7 @@ def get_path_bfs_enemies(game_state):
         # Enemy unreachable, use default:
         if not found:
             rel_x, rel_y = enemy_x - start_x, enemy_y - start_y
-            enemy_features.append([default_targets[0], rel_x, rel_y])
+            enemy_features.append([default_targets[0], rel_x / rows, rel_y / cols])
 
     # Pad with default if fewer than max
     while len(enemy_features) < max_targets:
@@ -386,45 +384,73 @@ def get_path_bfs_crates(game_state):
 
     # Own position and field
     field = game_state['field']
+    bombs = game_state['bombs']
     start_x, start_y = game_state['self'][3]
+    explosion_map = game_state['explosion_map']
     danger_map = get_danger_map(game_state)
     enemies = [enemy[3] for enemy in game_state['others']]
 
     rows, cols = field.shape
-    visited = set() # Keep track of tiles already visited
 
-    # BFS queue: stores (x, y, first_move) where first_move is initial direction
-    queue = deque([(start_x, start_y, None)])  
-    visited.add((start_x, start_y))  
+    # Define obstacles
+    obstacles = set(enemies)
+    for x in range(rows):
+        for y in range(cols):
+            if field[x, y] == -1 or explosion_map[x, y] == 1:
+                obstacles.add((x, y))
 
     # Crates
     crates = [(x, y) for x in range(rows) for y in range(cols) if field[x, y] == 1]
+    # No crates on field
+    if not crates:
+        return [-1]
+
+    # BFS queue: stores (x, y, first_move) where first_move is initial direction
+    queue = deque([(start_x, start_y, None, 0, [])])  
+    visited = {} # Keep track of tiles already visited
+    visited[(start_x, start_y)] = 0
 
     # BFS for shortest path to a tile adjacent to a crate:
     while queue:
-        x, y, first_move = queue.popleft()
+        x, y, first_move, steps, path = queue.popleft()
 
         # Check if adjacent to crate:
         for crate_x, crate_y in crates:
             if abs(crate_x - x) + abs(crate_y - y) == 1: # Manhattan
-                if first_move is not None:
-                    return [first_move]
+                # Check if path is safe from bombs
+                if is_path_safe_from_bombs(path, bombs, field):
+                    # Check if tile adjacent will be safe when bombs explode
+                    if will_tile_be_safe_when_bombs_explode(x, y, bombs, field):
+                        if first_move is not None:
+                            return [first_move]
+                        else:
+                            return [-1] # Already adjacent to crate
 
         # Explore neighboring tiles
         for i, (dx, dy) in enumerate(directions):
             new_x, new_y = x + dx, y + dy
+            new_steps = steps + 1
+            new_path = path + [(new_x, new_y)]
 
-            # Check if new position within bounds and not visited
-            if 0 <= new_x < rows and 0 <= new_y < cols and (new_x, new_y) not in visited:
-                if (field[new_x, new_y] == 0 and 
-                    danger_map[new_x, new_y] == 0 and
-                    (new_x, new_y) not in enemies): # Free tile, no danger, no enemy between.
-                    visited.add((new_x, new_y))
-                    # Enque new position, passing first move
-                    if first_move is None:
-                        queue.append((new_x, new_y, direction_names[i]))
-                    else:
-                        queue.append((new_x, new_y, first_move))
+            # Check if new position within bounds, free, not in obstacles, visi
+            if (0 <= new_x < rows and 0 <= new_y < cols 
+                and field[new_x, new_y] == 0
+                and (new_x, new_y) not in obstacles):
+
+                # Skip if visited this tile at an earlier or same time
+                if ((new_x, new_y) in visited and visited[(new_x, new_y)] <= new_steps):
+                    continue
+
+                # Check if path to new tile safe from bombs
+                if is_path_safe_from_bombs(new_path, bombs, field):
+                    # Check if will be safe 
+                    if will_tile_be_safe_when_bombs_explode(new_x, new_y, bombs, field):
+                        visited[(new_x, new_y)] = new_steps
+                            
+                        if first_move is None:
+                            queue.append((new_x, new_y, direction_names[i], new_steps, new_path))
+                        else:
+                            queue.append((new_x, new_y, first_move, new_steps, new_path))
 
     # Return if no path to target
     return [-1] # No valid move
@@ -463,9 +489,10 @@ def calculate_crates_destroyed(game_state):
             # Break if wall:
             if tile == -1:
                 break
+
             elif tile == 1:
                 crates_destroyed +=1
-                break
+                # Don't break loop if crate
 
     return [crates_destroyed]
 
@@ -550,7 +577,7 @@ def is_path_safe_from_bombs(path, bombs, field):
     return True # Path is safe
 
 # Determine if tile will be safe when a bomb goes off
-def will_tile_be_safe_when_bombs_explode(target_x, target_y, bombs, field, game_state):
+def will_tile_be_safe_when_bombs_explode(target_x, target_y, bombs, field):
     """
     Check if the potential safe tile, which may be safe in the time we get there,
     will not be safe anymore when a bomb goes off.
@@ -607,7 +634,7 @@ def get_path_bfs_safe_tile(game_state):
             # Check if path is safe from bombs
             if is_path_safe_from_bombs(path, bombs, field):
                 # Check if tile will be safe when bombs_explode, not only
-                if will_tile_be_safe_when_bombs_explode(x, y, bombs, field, game_state):
+                if will_tile_be_safe_when_bombs_explode(x, y, bombs, field):
                     return [first_move, steps]
         
         # Find adjacent tiles
@@ -711,7 +738,7 @@ def count_enemy_safe_tiles(game_state, enemy_pos, max_tiles=5):
     will want to log it.
     """
     if enemy_pos is None:
-        return 0  # No enemy to evaluate
+        return [0]  # No enemy to evaluate
 
     # Directions: Up, Right, Down, Left
     directions = [(-1, 0), (0, 1), (1, 0), (0, -1)]
@@ -719,7 +746,6 @@ def count_enemy_safe_tiles(game_state, enemy_pos, max_tiles=5):
     # Field information
     field = game_state['field']
     own_pos = game_state['self'][3]
-    bombs = game_state['bombs']
     explosion_map = game_state['explosion_map']
     rows, cols = field.shape
 
@@ -732,45 +758,70 @@ def count_enemy_safe_tiles(game_state, enemy_pos, max_tiles=5):
                 or explosion_map[x, y] != 0):  # Explosion
                 obstacles.add((x, y))
 
-    # Add bombs as obstacles
+    # Simulate own explosions from our current position
+    affected_tiles = get_affected_tiles(own_pos[0], own_pos[1], field)
+    own_bomb_timer = 4
+
+    # Existing bombs
+    bombs = game_state['bombs']
     bomb_positions = [bomb[0] for bomb in bombs]
-    obstacles.update(bomb_positions)
+    bomb_timer = [bomb[1] for bomb in bombs]
+    bomb_dict = dict(zip(bomb_positions, bomb_timer))
 
     # Add own agent as obstacle (assuming we can block the enemy)
     obstacles.add(own_pos)
 
     # Initialize BFS
     queue = deque()
-    visited = set()
-    queue.append(enemy_pos)
-    visited.add(enemy_pos)
+    visited = {}
+    queue.append((enemy_pos[0], enemy_pos[1], 0)) # (x, y, steps to tile)
+    visited[(enemy_pos[0], enemy_pos[1])] = 0
 
     # Count of safe tiles
-    safe_tile_count = 1  # Start with the enemy's current position
+    safe_tile_count = 0  # Start with the enemy's current position
 
     while queue:
-        x, y = queue.popleft()
+        x, y, steps = queue.popleft()
+
+        if safe_tile_count > max_tiles:
+            return [safe_tile_count / max_tiles]
+        
+        # Check if current tile will be safe at this step
+        is_safe = True
+
+        # Check if tile will be affected by the agent's bomb when it explodes
+        if steps >= own_bomb_timer and (x, y) in affected_tiles:
+            is_safe = False
+
+        # Check existing bombs on field
+        for bomb_pos, bomb_timer in bomb_dict.items():
+            bomb_blast_radius = get_affected_tiles(bomb_pos[0], bomb_pos[1], field)
+
+            if steps >= bomb_timer and (x, y) in bomb_blast_radius:
+                is_safe = False
+                break
+
+        if not is_safe:
+            continue # Skip unsafe tiles
+
+        safe_tile_count += 1
 
         # Explore neighboring tiles
         for dx, dy in directions:
             nx, ny = x + dx, y + dy
+            next_steps = steps + 1
 
             # Check boundaries and obstacles
             if (0 <= nx < rows and 0 <= ny < cols
-                and (nx, ny) not in visited
+                and ((nx, ny) not in visited or visited[(nx, ny)] > next_steps)
                 and (nx, ny) not in obstacles
-                and field[nx, ny] == 0):  # Free tile
+                and field[nx, ny] == 0):  # Free tile, within bounds, not visited and not too far from next steps
 
-                visited.add((nx, ny))
-                queue.append((nx, ny))
-                safe_tile_count += 1
-
-                # Early stopping if safe tiles exceed max_tiles
-                if safe_tile_count > max_tiles:
-                    return safe_tile_count  # Enough safe tiles, enemy not constrained
+                visited[(nx, ny)] = next_steps
+                queue.append((nx, ny, next_steps))
 
     # Return the total number of safe tiles accessible to the enemy
-    return safe_tile_count
+    return [safe_tile_count / max_tiles]
 
 
 # Determine whether placing a bomb here is useless
