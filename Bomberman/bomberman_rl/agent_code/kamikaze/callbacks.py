@@ -1,8 +1,10 @@
 import os
 import torch
+import pickle
+import random
 import numpy as np
 
-from .model import DQN_Lapsus
+from .model import DQN_Lapsus, ReplayBuffer
 from .features import state_to_features
 
 ACTIONS = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT', 'BOMB']

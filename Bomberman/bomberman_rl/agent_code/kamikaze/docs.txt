@@ -715,4 +715,60 @@ In the first round, we want to train the agent to collect coins and then later t
 
     500 rounds on 3rule 1v2_15 (now kamikaze) (res-500-3rule-1v2_15-c.json)
 
-    
+    {
+    "by_agent": {
+        "kamikaze": {
+            "bombs": 5660,
+            "coins": 1000,
+            "crates": 16883,
+            "invalid": 6283,
+            "kills": 32,
+            "moves": 44870,
+            "rounds": 500,
+            "score": 1160,
+            "steps": 57961,
+            "suicides": 243,
+            "time": 121.31872987747192
+        },
+        "rule_based_agent_0": {
+            "bombs": 9394,
+            "coins": 1129,
+            "crates": 14588,
+            "invalid": 3198,
+            "kills": 175,
+            "moves": 103909,
+            "rounds": 500,
+            "score": 2004,
+            "steps": 116897,
+            "suicides": 224,
+            "time": 95.08787178993225
+        },
+        "rule_based_agent_1": {
+            "bombs": 9593,
+            "coins": 1216,
+            "crates": 14938,
+            "invalid": 3051,
+            "kills": 138,
+            "moves": 108130,
+            "rounds": 500,
+            "score": 1906,
+            "steps": 121148,
+            "suicides": 214,
+            "time": 98.36554408073425
+        },
+        "rule_based_agent_2": {
+            "bombs": 9749,
+            "coins": 1143,
+            "crates": 14745,
+            "invalid": 3253,
+            "kills": 139,
+            "moves": 108881,
+            "rounds": 500,
+            "score": 1838,
+            "steps": 122228,
+            "suicides": 222,
+            "time": 99.24198579788208
+        }
+    }
+
+    Our agent is only half as bad as the rule based ones. I think this is a success.

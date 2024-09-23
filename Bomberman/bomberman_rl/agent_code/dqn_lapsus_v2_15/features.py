@@ -107,10 +107,14 @@ def state_to_features(game_state: dict) -> np.array:
 
     return features
 
+
+# Get an L1 <= 3 norm around the agent for features regarding its environment
 def get_local_vision_grid(game_state):
     """
-    Returns a flattened feature vector representing the rhombus-shaped area around the agent,
-    extending up to 3 tiles in each direction (L1 norm ≤ 3), using single integer encoding per tile.
+    We want to improve our agent's field of view beyond the 4 neighboring tiles. The smartest
+    way imo is to make a diamond shape around the agent extending up to 3 blocks in the cardinal
+    directions and filling the gaps. In total 25 features detailing what kind of block is in
+    the respective tile.
     """
     field = game_state['field']
     explosion_map = game_state['explosion_map']
@@ -127,19 +131,22 @@ def get_local_vision_grid(game_state):
     # Precompute bomb positions with their timers (normalized if needed)
     bomb_positions = set(bomb[0] for bomb in bombs)
 
-    # Define the range for L1 norm ≤ 3
+    # Define the range for L1 norm <= 3
     for dx in range(-3, 4):
         for dy in range(-3, 4):
             if abs(dx) + abs(dy) > 3:
                 continue  # Skip tiles outside the rhombus
             x, y = x0 + dx, y0 + dy
-
+            """ 
+            Chatgpt said bitwise encoding was helpful, but doesn't matter we normalize
+            everything to 1 later anyway
+            """
             # Initialize encoded value
             encoded_value = 0
 
             # Check boundaries
             if x < 0 or x >= rows or y < 0 or y >= cols:
-                # Out of bounds - treat as wall
+                # Out of bounds (treat as wall)
                 encoded_value |= 1  # Set bit 0 for wall
             else:
                 # Tile Type
@@ -171,6 +178,7 @@ def get_local_vision_grid(game_state):
 
 # Get neighboring tiles
 ################## Variant 2.1.2
+## We end up not using this, instead local_vision_grid
 def get_neighboring_tiles(own_position, game_state):
     # Field info
     field = game_state['field']
@@ -537,7 +545,6 @@ def get_path_bfs_crates(game_state):
     bombs = game_state['bombs']
     start_x, start_y = game_state['self'][3]
     explosion_map = game_state['explosion_map']
-    danger_map = get_danger_map(game_state)
     enemies = [enemy[3] for enemy in game_state['others']]
 
     rows, cols = field.shape
@@ -697,12 +704,12 @@ def get_affected_tiles(bx, by, field):
 
     for dx, dy in directions:
         for i in range(1, 4):  # Bomb blast radius is 3
-            nx, ny = bx + dx * i, by + dy * i
-            if 0 <= nx < field.shape[0] and 0 <= ny < field.shape[1]:
-                if field[nx, ny] == -1:  # Wall blocks the blast
+            new_x, new_y = bx + dx * i, by + dy * i
+            if 0 <= new_x < field.shape[0] and 0 <= new_y < field.shape[1]:
+                if field[new_x, new_y] == -1:  # Wall blocks the blast
                     break
-                affected_tiles.add((nx, ny))
-                #if field[nx, ny] == 1:  # Crate is destroyed but blocks further blast
+                affected_tiles.add((new_x, new_y))
+                #if field[new_x, new_y] == 1:  # Crate is destroyed but blocks further blast
                     #break
             else:
                 break
@@ -868,16 +875,16 @@ def is_enemy_in_dead_end(game_state, enemy_pos, depth = 3, threshold = 5):
 
         # Explore neighboring tiles
         for dx, dy in directions:
-            nx, ny = x + dx, y + dy
+            new_x, new_y = x + dx, y + dy
 
             # Check boundaries, visited and obstacles
-            if (0 <= nx < rows and 0 <= ny < cols
-                and (nx, ny) not in visited
-                and (nx, ny) not in obstacles
-                and field[nx, ny] == 0):
+            if (0 <= new_x < rows and 0 <= new_y < cols
+                and (new_x, new_y) not in visited
+                and (new_x, new_y) not in obstacles
+                and field[new_x, new_y] == 0):
 
-                visited.add((nx, ny))
-                queue.append((nx, ny, current_depth + 1))
+                visited.add((new_x, new_y))
+                queue.append((new_x, new_y, current_depth + 1))
 
     reachable_tiles = len(visited)
     return [int(reachable_tiles <= threshold)]
@@ -958,17 +965,17 @@ def count_enemy_safe_tiles(game_state, enemy_pos, max_tiles=5):
 
         # Explore neighboring tiles
         for dx, dy in directions:
-            nx, ny = x + dx, y + dy
+            new_x, new_y = x + dx, y + dy
             next_steps = steps + 1
 
             # Check boundaries and obstacles
-            if (0 <= nx < rows and 0 <= ny < cols
-                and ((nx, ny) not in visited or visited[(nx, ny)] > next_steps)
-                and (nx, ny) not in obstacles
-                and field[nx, ny] == 0):  # Free tile, within bounds, not visited and not too far from next steps
+            if (0 <= new_x < rows and 0 <= new_y < cols
+                and ((new_x, new_y) not in visited or visited[(new_x, new_y)] > next_steps)
+                and (new_x, new_y) not in obstacles
+                and field[new_x, new_y] == 0):  # Free tile, within bounds, not visited and not too far from next steps
 
-                visited[(nx, ny)] = next_steps
-                queue.append((nx, ny, next_steps))
+                visited[(new_x, new_y)] = next_steps
+                queue.append((new_x, new_y, next_steps))
 
     # Return the total number of safe tiles accessible to the enemy
     return [safe_tile_count / max_tiles]

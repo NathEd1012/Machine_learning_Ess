@@ -649,5 +649,37 @@ In the first round, we want to train the agent to collect coins and then later t
 
     Let's train it 20000 times on classic with 1 peaceful, 1 rule 1 v2_13
 
-    It's getting better indeed, surviving the round more often
+    It's getting better indeed, surviving the round more often. Although on average only 20% of the time.
+
+    10k of something else. I'll save the terminal here:
+
+    (venv) (base) MacBook-Air:bomberman_rl juancarlospl$ python main.py play --train 1 --agents dqn_lapsus_v2_12 peaceful_agent peaceful_agent dqn_lapsus_v2_13 --n-rounds 5000 --scenario some-crates --no-gui
+    100%|███████████████████| 5000/5000 [1:05:54<00:00,  1.26it/s]
+    (venv) (base) MacBook-Air:bomberman_rl juancarlospl$ python main.py play --train 1 --agents dqn_lapsus_v2_12 peaceful_agent peaceful_agent rule_based_agent --n-rounds 10000 --scenario mo
+    re-crates --no-gui
+    100%|█████████████████| 10000/10000 [2:52:30<00:00,  1.04s/it]
+    (venv) (base) MacBook-Air:bomberman_rl juancarlospl$ python main.py play --train 1 --agents dqn_lapsus_v2_12 dqn_lapsus_v2_13 peaceful_agent rule_based_agent --n-rounds 20000 --no-gui
+    100%|█████████████████| 20000/20000 [7:12:21<00:00,  1.30s/it]
+    (venv) (base) MacBook-Air:bomberman_rl juancarlospl$ python main.py play --train 1 --agents dqn_lapsus_v2_12 dqn_lapsus_v2_13 peaceful_agent rule_based_agent --n-rounds 10000 --no-gui
+    100%|█████████████████| 10000/10000 [3:21:14<00:00,  1.21s/it]
+
+    Test: 500 rounds on classic against 1 peaceful, 1 v2_15 1 rule (res-500-1peaceful-1rule-1v2_12-1v2_15-c.json)
+
+        As we had seen previously, v2_12 is very aggressive and kills relatively many opponents. Not significantly more than v2_15 tho.
+        However, v2_15 is better at getting coins, almost doubling its score over v2_12 over that. It also survives slightly longer on avreage.
+
+    500 rounds on classic against 2 peaceful 1v2_15 1 v2_12 (res-500-2peaceful-1v2_12-1v2_15-c.json)
+
+        Despite every training indication showing otherwise, v2_15 survives longer, kills roughly the same, but gets 2-3x more coins,
+        making its score simply better.
+
+    500 rounds on classic against 1v2_15 1v2_12 (res-500-1v2_12-1v2_15-c.json)
+
+    500 rounds on 2rule 1v2_15 1v2_12 (res-500-2rule-1v2_12-1v2_15-c.json)
+
+        It's clear that despite all training signs telling otherwise, v2_15 is the better performer in almost all metrics.
+
+    
+
+
         
