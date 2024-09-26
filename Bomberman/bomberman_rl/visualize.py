@@ -6,14 +6,14 @@ import argparse
 
 
 ### Load data
-def load_data(agent_name):
+def load_data(agent_name, file_path = None):
     """
     Load csv file into a pd DataFrame
-
-    :param file_path: Path to training_stats.csv
-    :return: DataFrame containing data
     """
-    file_path = f"agent_code/{agent_name}/training_stats.csv"
+
+    # Default file_path if not otherwise specified
+    if file_path is None:
+        file_path = f"agent_code/{agent_name}/training_stats.csv"
 
     if not os.path.isfile(file_path):
         print(f"File not found in: {file_path}")
@@ -168,6 +168,10 @@ def main():
     # Basic mode for a single agent
     parser.add_argument('--agent1', type = str, required = True, help = "Name of the (first) agent under which to search for training_stats.csv file")
 
+    # File paths for statistics
+    parser.add_argument('--file-path', type = str, required = False, help = "Search for stats in desired directory.")
+    parser.add_argument('--file-path2', type = str, required = False, help = "Search for stats in desired directory for second agent.")
+
     # Compare to second agent
     parser.add_argument('--agent2', type = str, required = False, help = "Name of the second agent under which to search for training_stats.csv file")
 
@@ -185,7 +189,7 @@ def main():
 
     # If only one agent, plot single-agent stats
     if args.agent1 and not args.agent2:
-        data = load_data(args.agent1)
+        data = load_data(args.agent1, file_path = args.file_path)
 
         # Stats plot?
         if args.stats:
@@ -198,8 +202,8 @@ def main():
             plot_action_histogram(data, actions_to_plot, row = args.row)
 
     elif args.agent1 and args.agent2:
-        data1 = load_data(args.agent1)
-        data2 = load_data(args.agent2)
+        data1 = load_data(args.agent1, file_path = args.file_path)
+        data2 = load_data(args.agent2, file_path = args.file_path2)
 
         # Stats comparison plot?
         if args.stats:
