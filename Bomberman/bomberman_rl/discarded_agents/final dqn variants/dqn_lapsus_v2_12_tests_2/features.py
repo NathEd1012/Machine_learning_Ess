@@ -92,7 +92,7 @@ def state_to_features(game_state: dict) -> np.array:
 
     
     features = np.concatenate([
-            neighboring_tiles_features, # 4: up, right, down, left
+            #neighboring_tiles_features, # 4: up, right, down, left
             #bomb_features, # 5: up, right, down, left, here
             next_move_coin_features, # 1: in which direction does the bfs say we should go for coin
             #next_move_crate_features, # 1: in which direction does the bfs say we should go for crate
@@ -701,7 +701,7 @@ def get_path_bfs_safe_tile(game_state):
                 obstacles.add((x, y))
 
     # Initialize BFS queue and visited set
-    # (x, y, first_move, steps to reach it)
+    # (x, y, first_move, steps to reach it, path)
     queue = deque([(start_x, start_y, None, 0, [])])
     visited = set([(start_x, start_y)])
 

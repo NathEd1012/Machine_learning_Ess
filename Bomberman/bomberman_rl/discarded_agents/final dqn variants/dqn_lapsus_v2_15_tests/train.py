@@ -316,10 +316,10 @@ def reward_from_events(self, events: List[str]):
     """
     game_rewards = {
         e.INVALID_ACTION: -0.1,
-        #e.MOVED_LEFT: -0.01,
-        #e.MOVED_RIGHT: -0.01,
-        #e.MOVED_UP: -0.01,
-        #e.MOVED_DOWN: -0.01,
+        e.MOVED_LEFT: -0.01,
+        e.MOVED_RIGHT: -0.01,
+        e.MOVED_UP: -0.01,
+        e.MOVED_DOWN: -0.01,
         e.WAITED: -0.1,
         e.KILLED_SELF: -5,
         e.BOMB_DROPPED: -0.1,
@@ -332,7 +332,7 @@ def reward_from_events(self, events: List[str]):
         e.ENEMY_POTENTIALLY_KILLED: 1,
         e.KILLED_OPPONENT: 5,
         e.LAST_AGENT_STANDING: 5,
-        #e.CRATE_DESTROYED: 0.5,
+        e.CRATE_DESTROYED: 0.5,
         # Custom events
         #e.COOL: 0.01,
         e.WARM: - 0.05,
@@ -343,7 +343,7 @@ def reward_from_events(self, events: List[str]):
         e.CLOSER_TO_ENEMY: 0.1,
         e.FURTHER_FROM_ENEMY: -0.1,
         #e.ENEMY_IN_DEAD_END: 0.5,
-        e.IN_DEAD_END: -0.5
+        #e.IN_DEAD_END: -0.5
     }
     reward_sum = 0
 
